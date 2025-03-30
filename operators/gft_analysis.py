@@ -1,13 +1,14 @@
 from typing import Any
 import numpy as np
+from maths.spectral import SpectralDecomposition, FrequencyDomainSignal
 
 from dynamics import LayeredOscillatorState
 
 def analyze_gft_dynamics(self, state: LayeredOscillatorState) -> dict[str, Any]:
     """
-    Analyze network dynamics using GFT principles
+    Analyze network dynamics using Graph Fouriter Transform principles
     ---------------------------------------------
-    This method directly integrates with your GFT approach by:
+    This method directly integrates with GFT approach by:
 
     Using the Hebbian weight matrices as the connectivity for GFT analysis
     Analyzing how phase patterns project onto the graph's eigenmodes
@@ -18,7 +19,7 @@ def analyze_gft_dynamics(self, state: LayeredOscillatorState) -> dict[str, Any]:
     
     for i in range(state.num_layers):
         # Use within-layer weights as connectivity for GFT
-        A = self.within_layer_weights[i]
+        A = self.within_layer_weights[i] # TODO: Not actually implemented yet
         
         # Compute normalized graph Laplacian
         D = np.diag(np.sum(A, axis=1))

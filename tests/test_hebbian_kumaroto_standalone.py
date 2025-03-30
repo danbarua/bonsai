@@ -84,6 +84,10 @@ class HebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
                 # Create a matrix for each layer's internal coupling
                 w = np.random.normal(0, 0.01, (n_oscillators, n_oscillators))
                 self.weights.append(w)
+
+        # Ensure weight diagonal is zero'd
+        for i in range(layer_count):
+            np.fill_diagonal(self.weights[i], 0.0)  # Explicit zero diagonal
         
         # Phase update for all layers
         phase_updates = []

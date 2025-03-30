@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Literal, TypeVar, Generic
+from typing import Generic, Literal, TypeVar
+
 import numpy as np
 from numpy.typing import NDArray
 

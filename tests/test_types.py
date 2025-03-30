@@ -4,9 +4,9 @@ import math
 from enum import Enum, auto
 from typing import NewType, TypeVar, Generic, Annotated, List, Tuple, Optional
 from dataclasses import dataclass
-from maths import Dimension, FrequencyBand, FrequencyDomainSignal, FrequencyHz, FrequencyRads, GraphLaplacian, Phase, PhaseVector, SpectralDecomposition
-
-
+from maths.core import Dimension, FrequencyBand, FrequencyHz, FrequencyRads, Phase, PhaseVector
+from maths.spectral import FrequencyDomainSignal,SpectralDecomposition
+from maths.graphs import GraphLaplacian
 # # === Domain Types (as defined in the note) ===
 
 # # Base dimension types to avoid confusion

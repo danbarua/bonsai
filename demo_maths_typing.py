@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
-from maths import THETA_BAND, FrequencyDomainSignal, FrequencyHz, GraphLaplacian, Phase
+from maths import THETA_BAND, FrequencyHz, Phase
+from maths.spectral import FrequencyDomainSignal
+from maths.graphs import GraphLaplacian
 
 # === Frequency and Phase Examples ===
 # Create frequencies in different units

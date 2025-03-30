@@ -1,10 +1,13 @@
-from typing import TypeAlias, Protocol, Annotated, NewType
-from typing_extensions import Self
-import numpy as np
-from numpy.typing import NDArray
-from beartype import beartype
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Annotated, NewType, Protocol, TypeAlias
+
+import numpy as np
+from beartype import beartype
+from numpy.typing import NDArray
+from typing_extensions import Self
+
+from maths import FrequencyHz
 
 # Create semantic newtypes instead of just type aliases
 Radians = NewType('Radians', float)
@@ -21,7 +24,7 @@ PhaseAngle = Annotated[Radians, "Value should be in [0, 2π)"]
 @dataclass(frozen=True)
 class OscillatorParameters:
     """Parameters for oscillator dynamics"""
-    natural_frequency: float  # in Hz
+    natural_frequency: FrequencyHz  # in Hz
     coupling_strength: PositiveFloat
     decay_rate: PositiveFloat
     

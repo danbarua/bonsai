@@ -1,8 +1,12 @@
-import numpy as np
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, TypeVar, Generic
-from numpy.typing import NDArray
+from typing import Any, Generic, Optional, Protocol, TypeVar
+
+import numpy as np
 from beartype import beartype
+from numpy.typing import NDArray
+
+from dynamics.domain_types import TimeStep
+
 
 # --- Mock LayeredOscillatorState for testing ---
 @dataclass
@@ -52,5 +56,5 @@ S = TypeVar('S')
 
 @beartype
 class StateMutation(Protocol, Generic[S]):
-    def apply(self, state: S) -> S: ...
+    def apply(self, state: S, dt:TimeStep = 0.01) -> S: ...
     def get_delta(self) -> dict[str, Any]: ...
