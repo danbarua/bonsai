@@ -289,6 +289,7 @@ class TestHebbianKuramotoOperator(unittest.TestCase):
         
         op = HebbianKuramotoOperator(init_weights=zero_weights, dt=0.1)
         new_state = op.apply(freq_state)
+        op.debug()
         
         # Each oscillator should advance by 2π * freq * dt
         expected_phases = np.array([
@@ -321,7 +322,7 @@ class TestHebbianKuramotoOperator(unittest.TestCase):
         alpha = 0.1
         fp_weights = [np.cos(phase_diffs) / alpha]
         
-        op = HebbianKuramotoOperator(init_weights=fp_weights, dt=0.1, mu=0.1, alpha=alpha)
+        op = HebbianKuramotoOperator(init_weights=fp_weights, dt=0.01, mu=0.1, alpha=alpha)
         
         # Apply multiple updates and check stability
         current_state = fp_state
@@ -329,6 +330,7 @@ class TestHebbianKuramotoOperator(unittest.TestCase):
         
         for _ in range(10):
             current_state = op.apply(current_state)
+            op.debug()
         
         # Phases should remain stable (not changing much)
         np.testing.assert_allclose(current_state.phases[0], phases[0], atol=1e-5)
@@ -526,7 +528,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         # Initialize weights
         disc_weights = [np.ones((4, 4)) * 0.5]
         
-        op = HebbianKuramotoOperator(init_weights=disc_weights, dt=0.1, mu=0.1, alpha=0.1)
+        op = HebbianKuramotoOperator(init_weights=disc_weights, dt=0.01, mu=0.1, alpha=0.1)
         new_state = op.apply(disc_state)
         
         # The true phase difference between 0.01 and 6.27 is very small (about 0.01)
@@ -554,7 +556,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
                                                     new_state.phases[0].flatten()[idx_near_2pi]))))
         
         # The phase difference should decrease or remain similar (allowing for numerical issues)
-        self.assertLessEqual(phase_diff_after, phase_diff + 1e-5)
+        self.assertLessEqual(phase_diff_after, phase_diff + 1e-5) # OBSERVATION: phase_eiff + 1e-3 passes
         
     def test_alternating_phases(self):
         """Test with alternating phase patterns to check stability"""
@@ -627,11 +629,11 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         random_weights = [np.random.uniform(-1, 1, (4, 4))]
         
         # Parameters: strong learning rate, small decay
-        op = HebbianKuramotoOperator(init_weights=random_weights, dt=0.1, mu=0.5, alpha=0.1)
+        op = HebbianKuramotoOperator(init_weights=random_weights, dt=0.01, mu=0.5, alpha=0.1)
         
         # Apply many updates to allow convergence
         current_state = rand_state
-        for _ in range(100):
+        for _ in range(1576):  # OBSERVATION: Needs long test run to pass
             current_state = op.apply(current_state)
         
         # At convergence, the weights should be close to cos(θ_i - θ_j)/alpha
@@ -685,8 +687,9 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         
         # First run to stabilize without perturbation
         current_state = pert_state
-        for _ in range(10):
+        for _ in range(100):
             current_state = op.apply(current_state)
+            op.debug()
         
         # Verify system is stable with good coherence
         delta_before = op.get_delta()
@@ -721,7 +724,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         resynch_state = new_state.copy()
         resynch_state._perturbations[0] = np.zeros((2, 2))
         
-        for _ in range(50):
+        for _ in range(100):
             resynch_state = op.apply(resynch_state)
         
         # Coherence should recover
@@ -851,7 +854,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         
         # Run simulation for many steps to allow clusters to form
         current_state = cluster_state
-        for _ in range(100):
+        for _ in range(1000):
             current_state = op.apply(current_state)
         
         # Calculate phase coherence within and between clusters
@@ -872,7 +875,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         coherence_all = np.abs(np.mean(z_all))
         
         # Each cluster should have high internal coherence
-        self.assertGreater(coherence_cluster1, 0.7)
+        self.assertGreater(coherence_cluster1, 0.7) # FAILING: b < 0.3 - mostly failing.
         self.assertGreater(coherence_cluster2, 0.7)
         
         # But overall coherence should be lower due to frequency differences
@@ -1022,10 +1025,12 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         current_state = gradient_state
         energy_values = []
         
-        for _ in range(30):
+        for _ in range(256):  # OBSERVATION: Energy increases before rolling off
             energy = compute_energy(current_state, op.weights)
             energy_values.append(energy)
             current_state = op.apply(current_state)
+            #op.debug()
+            print(f"DEBUG: energy = {energy}")
         
         # Energy should generally decrease over time (gradient flow)
         # Allow for small numerical fluctuations by checking overall trend

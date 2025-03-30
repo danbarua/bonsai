@@ -56,7 +56,7 @@ class HebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
             phase_update_flat = np.sum(self.weights[i] * sin_diffs, axis=1)
             
             # Add natural frequencies 
-            phase_update_flat += state.frequencies[i].flatten() * 2 * np.pi
+            phase_update_flat += state.frequencies[i].flatten() * 2 * np.pi #* self.dt
             
             # Reshape back to original shape and store
             phase_update = phase_update_flat.reshape(shape)
@@ -75,6 +75,8 @@ class HebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
         coherence_values = []
         mean_weights = []
         weight_changes = []
+        mean_coherence = 0.0
+        max_weight = 0.0
         
         for i in range(layer_count):
             # Phase coherence
@@ -85,17 +87,23 @@ class HebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
             # Weight statistics
             mean_weight = float(np.mean(self.weights[i]))
             mean_weights.append(mean_weight)
-        
+
+            max_weight = float(np.max([np.max(w) for w in self.weights]))
+            mean_coherence = float(np.mean(coherence_values))
         # Store information about this update
         self.last_delta = {
             "type": "hebbian_kuramoto",
             "coherence": coherence_values,
-            "mean_coherence": float(np.mean(coherence_values)),
+            "mean_coherence": mean_coherence,
             "mean_weights": mean_weights,
-            "max_weight": float(np.max([np.max(w) for w in self.weights]))
+            "max_weight": max_weight
         }
         
         return new_state
     
     def get_delta(self) -> dict[str, Any]:
         return self.last_delta
+    
+    def debug(self) -> None:
+        for k, v in self.last_delta.items():
+            print(f"DEBUG: {k} = {v}")

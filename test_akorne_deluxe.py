@@ -27,9 +27,9 @@ class DummyLayeredOscillatorState:
             amplitudes=[a.copy() for a in self.amplitudes],
         )
 # --- Import the operator to test ---
-# from your_module import EnhancedHebbianKuramotoOperator
-# For testing, we assume EnhancedHebbianKuramotoOperator is already defined in the context.
-class TestEnhancedHebbianKuramotoOperator(unittest.TestCase):
+# from your_module import DeluxeHebbianKuramotoOperator
+# For testing, we assume DeluxeHebbianKuramotoOperator is already defined in the context.
+class TestDeluxeHebbianKuramotoOperator(unittest.TestCase):
     def setUp(self):
         # Set a fixed random seed for reproducibility.
         np.random.seed(42)
@@ -44,7 +44,7 @@ class TestEnhancedHebbianKuramotoOperator(unittest.TestCase):
         amplitudes = [np.ones(grid_shape)]
         self.state = DummyLayeredOscillatorState(phases, frequencies, amplitudes)
         # Create an instance of the operator with default parameters.
-        self.operator = DeluxeHebbianKuramotoOperator(
+        self.operator = DeluxeHebbianKuramotoOperator()(
             dt=0.1,
             alpha=0.1,
             mu=0.01,
