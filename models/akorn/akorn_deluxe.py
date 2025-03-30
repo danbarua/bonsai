@@ -98,8 +98,11 @@ class DeluxeHebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
         for h_idx in hub_indices:
             h_y, h_x = np.unravel_index(h_idx, self.grid_size)
             # Increase coupling to and from this hub
-            coupling[h_y, h_x, :, :] *= self.config["HUB_FACTOR"]
-            coupling[:, :, h_y, h_x] *= self.config["HUB_FACTOR"]
+            #coupling[h_y, h_x, :, :] *= self.config["HUB_FACTOR"]
+            #coupling[:, :, h_y, h_x] *= self.config["HUB_FACTOR"]
+
+            coupling[h_y, h_x] *= self.config["HUB_FACTOR"]
+            coupling[h_y, h_x] *= self.config["HUB_FACTOR"]
         
         return coupling
     
