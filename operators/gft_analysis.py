@@ -1,7 +1,7 @@
 from typing import Any
 import numpy as np
 
-from hebbian_kumaroto import LayeredOscillatorState
+from dynamics import LayeredOscillatorState
 
 def analyze_gft_dynamics(self, state: LayeredOscillatorState) -> dict[str, Any]:
     """

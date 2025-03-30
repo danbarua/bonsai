@@ -21,11 +21,11 @@ dependencies:
   - ipykernel
   - jupyterlab
 
-
   # Development dependencies
   - mypy
   - beartype
   - pytest
+  - coverage
   - pip                    # ensures it's in the correct conda env
   # - pip:
   # # API & async stack

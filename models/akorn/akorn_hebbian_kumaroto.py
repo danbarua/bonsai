@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any
 import numpy as np
 from numpy.typing import NDArray
-from hebbian_kumaroto import StateMutation, LayeredOscillatorState
+from dynamics import StateMutation, LayeredOscillatorState
 
 @dataclass
 @beartype

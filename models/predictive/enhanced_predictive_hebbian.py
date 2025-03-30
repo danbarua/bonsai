@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from hebbian_kumaroto import LayeredOscillatorState, StateMutation
+from dynamics import LayeredOscillatorState, StateMutation
 
 @dataclass
 class EnhancedPredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):

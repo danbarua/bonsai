@@ -3,8 +3,8 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Tuple, Protocol, TypeVar, Generic
 from numpy.typing import NDArray
-from oscillators import StateMutation, LayeredOscillatorState
-from hebbian_kumaroto import HebbianKuramotoOperator
+from dynamics.oscillators import LayeredOscillatorState
+from models.hebbian import HebbianKuramotoOperator
 
 # --- Unit Tests ---
 class TestHebbianKuramotoOperator(unittest.TestCase):
