@@ -1,0 +1,35 @@
+name: fnnd
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+   # Core scientific stack
+  - python=3.10
+  - numpy
+  - scipy
+  - pandas
+  - xarray
+  - hdbscan       # small dbscan dependency vs scikit-learn
+  - networkx      # small worlds network analysis
+  - opencv
+
+  # Notebooks + Plotting
+  - matplotlib
+  - seaborn
+  - holoviews
+  - ipywidgets
+  - ipykernel
+  - jupyterlab
+
+
+  # Development dependencies
+  - mypy
+  - beartype
+  - pytest
+  - pip                    # ensures it's in the correct conda env
+  # - pip:
+  # # API & async stack
+  #     - fastapi
+  #     - uvicorn[standard]  # includes websockets, httpx, etc.
+  #     - anyio              # sometimes needed for websocket routing
+  #     - watchdog           # hot reload (like nodemon)
