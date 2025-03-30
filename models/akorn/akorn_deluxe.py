@@ -222,9 +222,9 @@ class DeluxeHebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
                 self.weights.append(self.coupling_matrix) # Use connectome-inspired coupling
                 self.equivalent_kuramoto_states.append(np.random.rand(n_oscillators, self.oscillator_dim))
                 self.equivalent_kuramoto_states[i] /= np.linalg.norm(self.equivalent_kuramoto_states[i], axis=1, keepdims=True) # Normalize
-                new_state._phases[i] = np.random.rand(n_oscillators, self.oscillator_dim)
-                new_state._phases[i] /= np.linalg.norm(new_state._phases[i], axis=1, keepdims=True) # Normalize
-                new_state._phases[i] = new_state._phases[i].reshape(shape + (self.oscillator_dim,))
+                new_state.phases[i] = np.random.rand(n_oscillators, self.oscillator_dim)
+                new_state.phases[i] /= np.linalg.norm(new_state.phases[i], axis=1, keepdims=True) # Normalize
+                new_state.phases[i] = new_state.phases[i].reshape(shape + (self.oscillator_dim,))
                 self.equivalent_kuramoto_states[i] = self.equivalent_kuramoto_states[i].reshape(shape + (self.oscillator_dim,))
         
         # For each layer, update both actual state and equivalent Kuramoto state
@@ -238,7 +238,7 @@ class DeluxeHebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
             # Update equivalent Kuramoto state (with fixed weights = 1/(2α))
             # This gives us stability information
             equiv_diffs = equiv_phases_flat[:, np.newaxis, :] - equiv_phases_flat[np.newaxis, :, :] # (N, N, dim)
-            equiv_update = state.frequencies[i].flatten() * 2 * np.pi #+ self.natural_frequencies[i] @ equiv_phases_flat # (N, dim)
+            equiv_update = state.frequencies[i].flatten() * 2 * np.pi + self.freq[i] @ equiv_phases_flat # (N, dim)
             equiv_update += np.sum(np.sin(equiv_diffs) / (2 * self.alpha), axis=1) # (N, dim)
             equiv_new = (equiv_phases_flat + self.dt * equiv_update) # (N, dim)
             equiv_new /= np.linalg.norm(equiv_new, axis=1, keepdims=True) # Normalize
