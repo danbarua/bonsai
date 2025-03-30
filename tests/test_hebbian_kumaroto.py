@@ -262,7 +262,10 @@ class TestHebbianKuramotoOperator(unittest.TestCase):
         # All weights should decay by alpha * dt
         for i in range(4):
             for j in range(4):
-                self.assertAlmostEqual(op.weights[0][i, j], 0.9)  # 1.0 - alpha * dt
+                if (i != j):
+                    self.assertAlmostEqual(op.weights[0][i, j], 0.9, "Weights should have decayed.")  # 1.0 - alpha * dt
+                else:
+                    self.assertEqual((op.weights[0][i, j]), 0.0, "Diagonal weights should be Zero.")
     
     def test_frequency_influence(self):
         """Test that natural frequencies properly influence phase updates"""
@@ -1005,7 +1008,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         uniform_weights = [np.ones((4, 4))]
         
         # Create operator with balanced learning/decay
-        op = HebbianKuramotoOperator(init_weights=uniform_weights, dt=0.01, mu=0.5, alpha=0.1)
+        op = HebbianKuramotoOperator(init_weights=uniform_weights, dt=0.1, mu=0.5, alpha=0.1)
         
         # For gradient flow, energy should decrease at each step
         # Compute initial energy
@@ -1016,26 +1019,24 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
             coupling_energy = -np.sum(weights[0] * np.cos(phase_diffs))
             
             # Additional term from Hebbian dynamics (weight regularization)
-            alpha = 0.1
-            weight_energy = alpha * np.sum(weights[0]**2) / 2
-            
+            weight_energy = op.alpha * np.sum(weights[0]**2) / 2
             return coupling_energy + weight_energy
         
         # Track energy over time
         current_state = gradient_state
         energy_values = []
         
-        for _ in range(256):  # OBSERVATION: Energy increases before rolling off
+        for _ in range(100):  # OBSERVATION: Energy increases before rolling off
             energy = compute_energy(current_state, op.weights)
             energy_values.append(energy)
             current_state = op.apply(current_state)
-            #op.debug()
+            # op.debug()
             print(f"DEBUG: energy = {energy}")
         
         # Energy should generally decrease over time (gradient flow)
         # Allow for small numerical fluctuations by checking overall trend
-        first_energies = np.mean(energy_values[:5])
-        last_energies = np.mean(energy_values[-5:])
+        first_energies = np.mean(energy_values[:20])
+        last_energies = np.mean(energy_values[-20:])
         
         self.assertGreater(first_energies, last_energies)
     

@@ -19,7 +19,7 @@ def analyze_gft_dynamics(self, state: LayeredOscillatorState) -> dict[str, Any]:
     
     for i in range(state.num_layers):
         # Use within-layer weights as connectivity for GFT
-        A = self.within_layer_weights[i] # TODO: Not actually implemented yet
+        A = self.within_layer_weights[i] # within = Hebbian, between = Predictive
         
         # Compute normalized graph Laplacian
         D = np.diag(np.sum(A, axis=1))
