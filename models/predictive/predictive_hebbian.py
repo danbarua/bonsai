@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from dynamics import LayeredOscillatorState, StateMutation
 
 @dataclass
-class EnhancedPredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
+class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
     """
     Enhanced implementation combining predictive coding between layers with 
     Hebbian-Kuramoto dynamics within layers, with additional features for 
@@ -22,7 +22,7 @@ class EnhancedPredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
     hebb_decay_rate: float = 0.1
     
     # Common parameters
-    dt: float = 0.1
+    dt: float = 0.01  # Reduced for better numerical stability
     weight_normalization: bool = True  # Whether to normalize weights
     
     # State variables
@@ -252,7 +252,7 @@ class EnhancedPredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
         self.last_delta = {
             "type": "enhanced_predictive_hebbian",
             "coherence": coherence_values,
-            "mean_coherence": float(np.mean(coherence_values)),
+            "mean_coherence": float(np.mean(coherence_values)) if len(coherence_values) > 0 else 0,
             "prediction_errors": error_norms,
             "total_error": float(np.sum(error_norms)),
             "weight_spectrum": spectral_stats,
