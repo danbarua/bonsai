@@ -64,7 +64,10 @@ class HebbianKuramotoOperator(StateMutation[LayeredOscillatorState]):
             # The correct mathematical model for the Kuramoto oscillator with Hebbian plasticity 
             # requires that both the coupling influence and natural frequencies be combined into 
             # a single phase update rate, which is then scaled by dt only once.
-            phase_update_flat += state.frequencies[i].flatten() * 2 * np.pi # * self.dt
+            phase_update_flat += state.frequencies[i].flatten() * 2 * np.pi 
+
+            # Add perturbations
+            phase_update_flat += state.perturbations[i].flatten()
             
             # Reshape back to original shape and store
             phase_update = phase_update_flat.reshape(shape)
