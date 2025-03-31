@@ -1,0 +1,3 @@
+grid_size_x,grid_size_y,oscillator_dim,trial,total_time_ms,iterations,converged,convergence_iteration,convergence_time_ms,mean_coherence,max_coherence,final_coherence,pattern_count,pattern_distinctiveness,peak_memory_kb,avg_memory_kb,model_max_weight,model_grid_size_x,model_grid_size_y,model_oscillator_dim
+8,12,1,1,104.56705093383789,100,0,100,104.56705093383789,0.062010739859010074,0.10113216600955,0.10113216600955,0,0.0,34224.0,34209.01960784314,0.12801164554819508,8,12,1
+16,24,1,1,873.1648921966553,100,0,100,873.1648921966553,0.03426449588804287,0.053465203912059334,0.023982590633548125,0,0.0,40976.0,40903.8431372549,0.13308006677444734,16,24,1

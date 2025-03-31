@@ -412,3 +412,124 @@ def track_memory(func):
         process = psutil.Process()
         start_memory = process.memory_info().rss / 1024  # KB
         result = func(*args, **kwargs)
+        end_memory = process.memory_info().rss / 1024  # KB
+        print(f"{func.__name__} memory usage: {end_memory-start_memory:.2f} KB")
+        return result
+    return wrapper
+
+def measure_character_processing(process_func, char, noise_level=0.0, occlusion_level=0.0, 
+                                max_iterations=1000, convergence_threshold=1e-4):
+    """
+    Measure metrics for character processing.
+    
+    Args:
+        process_func: Function that processes a character for one iteration
+        char: Character to process
+        noise_level: Noise level to apply
+        occlusion_level: Occlusion level to apply
+        max_iterations: Maximum iterations to run
+        convergence_threshold: Threshold for detecting convergence
+        
+    Returns:
+        ProcessMetrics object with collected metrics
+    """
+    collector = MetricsCollector(
+        convergence_threshold=convergence_threshold,
+        stability_window=10,
+        track_memory=True
+    )
+    
+    # Start timing
+    collector.start_timing()
+    
+    # Initialize processing
+    state, operator = process_func(char, noise_level, occlusion_level, initialize=True)
+    
+    # Process until convergence or max iterations
+    for i in range(max_iterations):
+        # Apply one iteration
+        state = operator.apply(state)
+        
+        # Record metrics
+        collector.record_iteration(i, operator.last_delta)
+        
+        # Check for convergence
+        if collector.metrics.converged:
+            print(f"Converged after {i+1} iterations")
+            break
+    
+    # End timing
+    collector.end_timing()
+    
+    # Finalize metrics
+    collector.finalize_metrics()
+    
+    return collector.metrics
+
+def compare_models(model_names, csv_paths, output_dir="metrics"):
+    """
+    Compare metrics from different models.
+    
+    Args:
+        model_names: List of model names
+        csv_paths: List of paths to CSV files with metrics
+        output_dir: Directory to save comparison results
+        
+    Returns:
+        Path to the comparison CSV file
+    """
+    all_data = []
+    
+    # Load data from each CSV
+    for model_name, csv_path in zip(model_names, csv_paths):
+        with open(csv_path, 'r', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                row['model'] = model_name
+                all_data.append(row)
+    
+    # Group by character and condition
+    grouped_data = {}
+    for row in all_data:
+        key = (row['character'], float(row['noise_level']), float(row['occlusion_level']))
+        if key not in grouped_data:
+            grouped_data[key] = {}
+        if row['model'] not in grouped_data[key]:
+            grouped_data[key][row['model']] = []
+        grouped_data[key][row['model']].append(row)
+    
+    # Compute average metrics for each group
+    comparison = []
+    for (char, noise, occlusion), models in grouped_data.items():
+        row = {
+            'character': char,
+            'noise_level': noise,
+            'occlusion_level': occlusion
+        }
+        
+        for model_name in model_names:
+            if model_name in models:
+                model_data = models[model_name]
+                # Average numeric fields
+                for field in ['total_time_ms', 'iterations', 'convergence_iteration', 
+                             'convergence_time_ms', 'mean_coherence', 'max_coherence',
+                             'final_coherence', 'pattern_count', 'peak_memory_kb']:
+                    if field in model_data[0]:
+                        values = [float(d[field]) for d in model_data]
+                        row[f"{model_name}_{field}"] = sum(values) / len(values)
+        
+        comparison.append(row)
+    
+    # Export comparison to CSV
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    csv_path = os.path.join(output_dir, f"model_comparison_{timestamp}.csv")
+    
+    with open(csv_path, 'w', newline='') as csvfile:
+        if comparison:
+            fieldnames = comparison[0].keys()
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(comparison)
+    
+    print(f"Model comparison saved to {csv_path}")
+    return csv_path

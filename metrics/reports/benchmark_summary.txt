@@ -1,0 +1,70 @@
+=== Oscillator-Based Learning Benchmark Summary ===
+
+== Character Processing Performance ==
+
+Clean Characters:
+  Hebbian Kuramoto:
+    Average Time: 582.17 ms
+    Average Coherence: 0.1094
+    Average Memory: 33999.33 KB
+
+  Predictive Hebbian:
+    Average Time: 5743.31 ms
+    Average Coherence: 0.2086
+    Average Memory: 34904.00 KB
+
+Noisy Characters:
+  Hebbian Kuramoto:
+    Average Time: 319.94 ms
+    Average Coherence: 0.0911
+    Average Memory: 34031.00 KB
+
+  Predictive Hebbian:
+    Average Time: 3191.91 ms
+    Average Coherence: 0.1838
+    Average Memory: 34929.00 KB
+
+Performance Ratios (Predictive / Hebbian):
+  Time Ratio: 88.86x
+  Memory Ratio: 1.03x
+  Coherence Ratio: 2.96x
+
+== Scaling Performance ==
+
+Hebbian Kuramoto Scaling:
+  Grid Size 8x12 (96 oscillators):
+    Time: 104.57 ms
+    Memory: 34224.00 KB
+
+  Grid Size 16x24 (384 oscillators):
+    Time: 873.16 ms
+    Memory: 40976.00 KB
+
+Predictive Hebbian Scaling:
+  Grid Size 8x12 (96 oscillators), Dim 2:
+    Time: 771.13 ms
+    Memory: 40156.00 KB
+
+  Grid Size 8x12 (96 oscillators), Dim 4:
+    Time: 996.32 ms
+    Memory: 40724.00 KB
+
+  Grid Size 16x24 (384 oscillators), Dim 2:
+    Time: 14585.86 ms
+    Memory: 43156.00 KB
+
+  Grid Size 16x24 (384 oscillators), Dim 4:
+    Time: 13988.18 ms
+    Memory: 43148.00 KB
+
+Scaling Factors:
+  Hebbian Time Scaling: 2.09x
+  Hebbian Memory Scaling: 0.30x
+
+== Key Findings ==
+
+1. Predictive Hebbian is 88.9x slower than Hebbian Kuramoto
+2. Predictive Hebbian and Hebbian Kuramoto have comparable memory usage
+3. Predictive Hebbian achieves 3.0x higher coherence than Hebbian Kuramoto
+4. Hebbian Kuramoto processing time scales with factor 2.09 relative to grid size
+5. Predictive Hebbian shows better noise robustness than Hebbian Kuramoto
