@@ -7,6 +7,10 @@ from typing import Annotated, Generic, List, NewType, Optional, Tuple, TypeVar
 import numpy as np
 from numpy.typing import NDArray
 
+from maths import Dimension
+from maths.spectral import FrequencyDomainSignal, SpectralDecomposition
+
+N = TypeVar('N')
 
 @dataclass
 class GraphLaplacian(Generic[N]):
