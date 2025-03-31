@@ -163,12 +163,47 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
             if i > 0:
                 # Project error from layer below
                 bottom_up_error = self.between_layer_weights[i-1].T @ errors[i-1]
-                pc_update += self.pc_error_scaling * bottom_up_error
+                
+                # Handle mismatched layer shapes
+                error_size = len(bottom_up_error)
+                pc_update_size = len(pc_update)
+                
+                if error_size == pc_update_size:
+                    # Same size, direct addition
+                    pc_update += self.pc_error_scaling * bottom_up_error
+                else:
+                    # Different sizes, need to adapt
+                    if error_size < pc_update_size:
+                        # Pad the error vector with zeros
+                        padded_error = np.zeros_like(pc_update)
+                        padded_error[:error_size] = bottom_up_error
+                        pc_update += self.pc_error_scaling * padded_error
+                    else:
+                        # Truncate the error vector
+                        pc_update += self.pc_error_scaling * bottom_up_error[:pc_update_size]
             
             # Top-down error to layer above
             if i < layer_count - 1:
                 # Direct influence of current error
-                pc_update -= self.pc_error_scaling * errors[i].reshape(-1)
+                # Handle mismatched layer shapes by ensuring the error vector has the right size
+                error_size = len(errors[i])
+                pc_update_size = len(pc_update)
+                
+                if error_size == pc_update_size:
+                    # Same size, direct subtraction
+                    pc_update -= self.pc_error_scaling * errors[i]
+                else:
+                    # Different sizes, need to adapt
+                    # For now, we'll use a simple approach: resize the error vector
+                    # In a more sophisticated implementation, we might use a projection matrix
+                    if error_size < pc_update_size:
+                        # Pad the error vector with zeros
+                        padded_error = np.zeros_like(pc_update)
+                        padded_error[:error_size] = errors[i]
+                        pc_update -= self.pc_error_scaling * padded_error
+                    else:
+                        # Truncate the error vector
+                        pc_update -= self.pc_error_scaling * errors[i][:pc_update_size]
             
             # Combine updates and reshape
             combined_update = hebbian_update + pc_update

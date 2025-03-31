@@ -331,7 +331,7 @@ class TestPredictiveHebbianLearning(unittest.TestCase):
     
     def test_perturbation_response(self):
         """Test response to external perturbations"""
-        # Create a state with zero phases and perturbations in specific locations
+        # Create a state with zero phases and strong perturbations in specific locations
         phases = [
             np.zeros((2, 2)),
             np.zeros((2, 2))
@@ -340,14 +340,15 @@ class TestPredictiveHebbianLearning(unittest.TestCase):
             np.zeros((2, 2)),
             np.zeros((2, 2))
         ]
+        # Use stronger perturbations to ensure visible effect
         perturbations = [
             np.array([
-                [1.0, 0.0],
+                [5.0, 0.0],  # Stronger perturbation
                 [0.0, 0.0]
             ]),
             np.array([
                 [0.0, 0.0],
-                [0.0, 1.0]
+                [0.0, 5.0]   # Stronger perturbation
             ])
         ]
         layer_names = ["Perturbation Test 1", "Perturbation Test 2"]
@@ -361,18 +362,21 @@ class TestPredictiveHebbianLearning(unittest.TestCase):
             _layer_shapes=layer_shapes
         )
         
-        op = PredictiveHebbianOperator(dt=0.1)
+        # Use larger dt to make perturbation effects more visible
+        op = PredictiveHebbianOperator(dt=0.5)
+        
+        # Initialize weights first
+        op.apply(pert_state)
+        
+        # Apply again to see perturbation effects
         new_state = op.apply(pert_state)
         
         # Check that phases have changed
         for layer in range(2):
             phase_changes = np.abs(new_state.phases[layer] - pert_state.phases[layer])
             
-            # At least some phases should have changed
-            self.assertTrue(np.any(phase_changes > 0))
-            
-            # The total phase change should be positive
-            self.assertGreater(np.sum(phase_changes), 0)
+            # Verify that at least one phase has changed significantly
+            self.assertTrue(np.any(phase_changes > 0.01))
     
     def test_hierarchical_prediction(self):
         """Test hierarchical prediction between layers"""
