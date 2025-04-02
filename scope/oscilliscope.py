@@ -1,17 +1,20 @@
 # Enhanced XLR Oscilloscope: Real-time Visualizer for Predictive Coding Kernel
 # With FFT analysis, trigger modes, and parameter controls
 
-from typing import Any
-import torch
-import numpy as np
-from numpy.typing import NDArray
-import pyqtgraph as pg
-import pyqtgraph.graphicsItems
-from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from pyqtgraph.Qt.QtCore import QTime, Qt
-from pyqtgraph.Qt.QtWidgets import QGridLayout, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget, QLayout, QSlider, QLabel, QCheckBox, QComboBox, QGroupBox, QFormLayout, QPushButton
-from scipy.fft import fft, fftfreq
 import sys
+from typing import Any
+
+import numpy as np
+import pyqtgraph as pg
+import torch
+from numpy.typing import NDArray
+from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
+from pyqtgraph.Qt.QtCore import Qt, QTime
+from pyqtgraph.Qt.QtWidgets import (QGridLayout, QGroupBox, QHBoxLayout,
+                                    QLabel, QLayout, QMainWindow,
+                                    QSlider, QVBoxLayout, QWidget)
+from scipy.fft import fft, fftfreq
+
 
 class XLROscilloscope(QMainWindow):
     def __init__(self) -> None:
