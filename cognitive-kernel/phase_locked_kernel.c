@@ -18,7 +18,7 @@
 sets the width and height of a 2D oscillator field patch.
 So each field layer is 64×64 = 4096 spatial units.
 */
-#define PATCH 64 // default 64
+#define PATCH 256 // default 64
 
 /*
 defines the number of such patches or layers, which might correspond to different feature maps, 
