@@ -1,15 +1,20 @@
 # Enhanced XLR Oscilloscope: Real-time Visualizer for Predictive Coding Kernel
 # With FFT analysis, trigger modes, and parameter controls
 
+from typing import Any
 import torch
 import numpy as np
+from numpy.typing import NDArray
 import pyqtgraph as pg
+import pyqtgraph.graphicsItems
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+from pyqtgraph.Qt.QtCore import QTime, Qt
+from pyqtgraph.Qt.QtWidgets import QGridLayout, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget, QLayout, QSlider, QLabel, QCheckBox, QComboBox, QGroupBox, QFormLayout, QPushButton
 from scipy.fft import fft, fftfreq
 import sys
 
-class XLROscilloscope(QtWidgets.QMainWindow):
-    def __init__(self):
+class XLROscilloscope(QMainWindow):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("XLR Predictive Oscilloscope")
         self.resize(1200, 800)
@@ -32,18 +37,18 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         
         # --- Trigger settings ---
         self.trigger_enabled = False
-        self.trigger_channel = 0  # 0=phase, 1=error, 2=symbolic
-        self.trigger_level = 0.0
-        self.trigger_mode = 0  # 0=rising, 1=falling, 2=change
+        self.trigger_channel:int = 0  # 0=phase, 1=error, 2=symbolic
+        self.trigger_level:float = 0.0
+        self.trigger_mode:int = 0  # 0=rising, 1=falling, 2=change
         self.triggered = False
-        self.trigger_cooldown = 0
+        self.trigger_cooldown:int = 0
         
         # --- Buffers for streaming data ---
-        self.buffer_size = 1000
-        self.data_phase = np.zeros(self.buffer_size)
-        self.data_error = np.zeros(self.buffer_size)
-        self.data_symbol = np.zeros(self.buffer_size)
-        self.data_spectral = np.zeros((3, self.buffer_size // 2))
+        self.buffer_size:int = 1000
+        self.data_phase:NDArray = np.zeros(self.buffer_size)
+        self.data_error:NDArray = np.zeros(self.buffer_size)
+        self.data_symbol:NDArray = np.zeros(self.buffer_size)
+        self.data_spectral:NDArray[np.float64] = np.zeros((3, self.buffer_size // 2))
         
         # --- Set up the UI ---
         self.setup_ui()
@@ -54,26 +59,26 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         self.timer.start(33)  # ~30 FPS
         
         # --- Performance tracking ---
-        self.last_time = QtCore.QTime.currentTime()
-        self.fps = 0
-        self.frame_count = 0
+        self.last_time:QTime = QtCore.QTime.currentTime()
+        self.fps:int = 0
+        self.frame_count:int = 0
     
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         # Main widget and layout
-        central_widget = QtWidgets.QWidget()
+        central_widget:QWidget = QWidget()
         self.setCentralWidget(central_widget)
-        main_layout = QtWidgets.QVBoxLayout(central_widget)
+        main_layout:QLayout = QVBoxLayout(central_widget)
         
         # Top panel for plots
-        plot_layout = QtWidgets.QGridLayout()
+        plot_layout:QLayout = QGridLayout()
         main_layout.addLayout(plot_layout, stretch=4)
         
         # Create plots
         self.create_plots(plot_layout)
         
         # Bottom panel for controls
-        control_panel = QtWidgets.QGroupBox("Control Panel")
-        control_layout = QtWidgets.QHBoxLayout(control_panel)
+        control_panel:QWidget = QGroupBox("Control Panel")
+        control_layout:QLayout = QHBoxLayout(control_panel)
         main_layout.addWidget(control_panel, stretch=1)
         
         # Create control panels
@@ -84,18 +89,18 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         # Status bar
         self.statusBar().showMessage("XLR Oscilloscope Ready")
     
-    def create_plots(self, layout):
+    def create_plots(self, layout:QLayout) -> None:
         # Time domain plots on the left
-        self.plot_phase = pg.PlotWidget(title="Layer 1 Phase Trace (mean θ)")
-        self.plot_error = pg.PlotWidget(title="Error Field Intensity (norm)")
-        self.plot_symbolic = pg.PlotWidget(title="Symbolic Vector Magnitude")
+        self.plot_phase:QWidget = pg.PlotWidget(title="Layer 1 Phase Trace (mean θ)")
+        self.plot_error:QWidget = pg.PlotWidget(title="Error Field Intensity (norm)")
+        self.plot_symbolic:QWidget = pg.PlotWidget(title="Symbolic Vector Magnitude")
         
         # Add trigger lines
-        self.trigger_line = pg.InfiniteLine(pos=0, angle=0, movable=True, pen='r')
+        self.trigger_line:pg.InfiniteLine = pg.InfiniteLine(pos=0, angle=0, movable=True, pen='r')
         self.trigger_line.sigPositionChanged.connect(self.update_trigger_level)
         
         # FFT plots on the right
-        self.plot_fft = pg.PlotWidget(title="Frequency Spectrum")
+        self.plot_fft:QWidget = pg.PlotWidget(title="Frequency Spectrum")
         
         # Add plots to layout
         layout.addWidget(self.plot_phase, 0, 0)
@@ -141,17 +146,17 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         self.plot_fft.setLabel('bottom', 'Frequency', units='Hz')
         self.plot_fft.setLogMode(x=True, y=True)  # Log scale for FFT
     
-    def create_parameter_controls(self, layout):
-        param_group = QtWidgets.QGroupBox("Parameters")
-        param_layout = QtWidgets.QFormLayout(param_group)
+    def create_parameter_controls(self, layout:QLayout) -> None:
+        param_group:QWidget = QtWidgets.QGroupBox("Parameters")
+        param_layout:QLayout = QtWidgets.QFormLayout(param_group)
         layout.addWidget(param_group, stretch=2)
         
         # Memory decay (α)
-        self.alpha_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.alpha_slider:QSlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.alpha_slider.setRange(0, 100)
         self.alpha_slider.setValue(int(self.α * 100))
         self.alpha_slider.valueChanged.connect(self.update_alpha)
-        self.alpha_label = QtWidgets.QLabel(f"α: {self.α:.2f}")
+        self.alpha_label:QLabel = QtWidgets.QLabel(f"α: {self.α:.2f}")
         param_layout.addRow(self.alpha_label, self.alpha_slider)
         
         # Noise level
@@ -175,7 +180,7 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         self.reset_button.clicked.connect(self.reset_system)
         param_layout.addRow(self.reset_button)
     
-    def create_trigger_controls(self, layout):
+    def create_trigger_controls(self, layout:QLayout) -> None:
         trigger_group = QtWidgets.QGroupBox("Trigger Settings")
         trigger_layout = QtWidgets.QFormLayout(trigger_group)
         layout.addWidget(trigger_group, stretch=2)
@@ -214,7 +219,7 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         self.trigger_status = QtWidgets.QLabel("Status: Disarmed")
         trigger_layout.addRow(self.trigger_status)
     
-    def create_info_panel(self, layout):
+    def create_info_panel(self, layout:QLayout) -> None:
         info_group = QtWidgets.QGroupBox("System Info")
         info_layout = QtWidgets.QFormLayout(info_group)
         layout.addWidget(info_group, stretch=1)
@@ -237,27 +242,26 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         self.save_button.clicked.connect(self.save_state)
         info_layout.addRow(self.save_button)
     
-    def update_alpha(self):
+    def update_alpha(self) -> None:
         self.α = self.alpha_slider.value() / 100.0
         self.alpha_label.setText(f"α: {self.α:.2f}")
     
-    def update_noise(self):
+    def update_noise(self) -> None:
         self.noise_level = self.noise_slider.value() / 100.0
         self.noise_label.setText(f"Noise: {self.noise_level:.2f}")
     
-    def update_perturbation(self):
+    def update_perturbation(self) -> None:
         self.perturbation_level = self.perturb_slider.value() / 100.0
         self.perturb_label.setText(f"Perturbation: {self.perturbation_level:.2f}")
     
-    def toggle_trigger(self, state):
-        self.trigger_enabled = (state == QtCore.Qt.Checked)
+    def toggle_trigger(self, state:Qt.CheckState) -> None:
+        self.trigger_enabled = (state == Qt.CheckState.Checked)
         if self.trigger_enabled:
             self.trigger_status.setText("Status: Armed")
-        else:
             self.trigger_status.setText("Status: Disabled")
             self.triggered = False
     
-    def update_trigger_source(self, index):
+    def update_trigger_source(self, index:int) -> None:
         self.trigger_channel = index
         # Move trigger line to appropriate plot
         if hasattr(self, 'trigger_line'):
@@ -274,28 +278,28 @@ class XLROscilloscope(QtWidgets.QMainWindow):
             elif index == 2:
                 self.plot_symbolic.addItem(self.trigger_line)
     
-    def update_trigger_mode(self, index):
+    def update_trigger_mode(self, index:int) -> None:
         self.trigger_mode = index
     
-    def update_trigger_level_from_spin(self, value):
+    def update_trigger_level_from_spin(self, value:float) -> None:
         self.trigger_level = value
         # Update the trigger line position
         if hasattr(self, 'trigger_line'):
             self.trigger_line.setValue(value)
     
-    def update_trigger_level(self):
+    def update_trigger_level(self) -> None:
         if hasattr(self, 'trigger_line'):
             self.trigger_level = self.trigger_line.value()
             # Update spinbox
             self.trigger_level_spin.setValue(self.trigger_level)
     
-    def arm_trigger(self):
+    def arm_trigger(self) -> None:
         self.trigger_enabled = True
         self.trigger_checkbox.setChecked(True)
         self.triggered = False
         self.trigger_status.setText("Status: Armed")
     
-    def reset_system(self):
+    def reset_system(self) -> None:
         # Reset the tensor states
         self.top_vector = torch.randn(self.I * self.J)
         self.top_tensor = self.top_vector.view(self.I, self.J)
@@ -311,9 +315,9 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         self.triggered = False
         self.trigger_status.setText("Status: Armed" if self.trigger_enabled else "Status: Disabled")
     
-    def save_state(self):
+    def save_state(self) -> None:
         # Save current state to file
-        state = {
+        state:dict[str, Any] = {
             'top_vector': self.top_vector.numpy(),
             'W_top': self.W_top.numpy(),
             'W_mid': self.W_mid.numpy(),
@@ -335,7 +339,7 @@ class XLROscilloscope(QtWidgets.QMainWindow):
             np.savez(filename, **state)
             self.statusBar().showMessage(f"State saved to {filename}")
     
-    def check_trigger(self, current_value, prev_value):
+    def check_trigger(self, current_value:float, prev_value:float) -> bool:
         if not self.trigger_enabled or self.triggered:
             return False
         
@@ -360,7 +364,7 @@ class XLROscilloscope(QtWidgets.QMainWindow):
         
         return False
     
-    def calculate_fft(self):
+    def calculate_fft(self) -> None:
         # Sample rate (assuming 30 FPS)
         sample_rate = 30.0
         
@@ -397,7 +401,7 @@ class XLROscilloscope(QtWidgets.QMainWindow):
                 elif i == 2:
                     self.symbol_peak_label.setText(f"Symbol Peak: {peak_freq:.2f} Hz")
     
-    def update(self):
+    def update(self) -> None:
         # Calculate FPS
         current_time = QtCore.QTime.currentTime()
         elapsed = self.last_time.msecsTo(current_time)
@@ -413,27 +417,49 @@ class XLROscilloscope(QtWidgets.QMainWindow):
                 self.fps_label.setText(f"FPS: {self.fps:.1f}")
         
         # --- XLR Computational Core ---
+        # Generate random perturbation with shape (I, J) = (6, 6)
         perturbation = torch.randn(self.I, self.J) * self.perturbation_level
+        # Apply tanh to get top_tensor with shape (I, J) = (6, 6)
         self.top_tensor = torch.tanh(self.top_vector.view(self.I, self.J) + perturbation)
 
         # L3: Top → Mid prediction
-        layer3 = torch.einsum('ij,ijkd -> kwhd', self.top_tensor, self.W_top)
+        # Einsum contracts i,j dimensions: (I, J) x (I, J, K, D) -> (K, D)
+        # self.top_tensor: (6, 6) x self.W_top: (6, 6, 8, 4) -> layer3_temp: (8, 4)
+        layer3_temp = torch.einsum('ij,ijkd -> kd', self.top_tensor, self.W_top)
+        # Reshape to (K, 1, 1, D) = (8, 1, 1, 4) and expand to (K, PATCH, PATCH, D) = (8, 32, 32, 4)
+        layer3 = layer3_temp.view(self.K, 1, 1, self.D).expand(-1, self.PATCH, self.PATCH, -1)
+        # Clone layer3 with shape (8, 32, 32, 4)
         shadow3 = layer3.clone()
+        # Modify phase component (first channel) of shadow3
         shadow3[..., 0] = (shadow3[..., 0] + torch.pi) % (2 * torch.pi)
 
         # L2: With memory
+        # Update memory with shape (K, PATCH, PATCH, D) = (8, 32, 32, 4)
         self.memory2 = self.α * self.memory2 + (1 - self.α) * layer3
-        layer2 = torch.einsum('ij,ijkd -> kwhd', self.top_tensor, self.W_mid)
+        # Einsum contracts i,j dimensions: (I, J) x (I, J, K, D) -> (K, D)
+        # self.top_tensor: (6, 6) x self.W_mid: (6, 6, 8, 4) -> layer2_temp: (8, 4)
+        layer2_temp = torch.einsum('ij,ijkd -> kd', self.top_tensor, self.W_mid)
+        # Reshape to (K, 1, 1, D) = (8, 1, 1, 4) and expand to (K, PATCH, PATCH, D) = (8, 32, 32, 4)
+        layer2 = layer2_temp.view(self.K, 1, 1, self.D).expand(-1, self.PATCH, self.PATCH, -1)
+        # Clone layer2 with shape (8, 32, 32, 4)
         shadow2 = layer2.clone()
+        # Modify phase component (first channel) of shadow2
         shadow2[..., 0] = (shadow2[..., 0] + torch.pi) % (2 * torch.pi)
 
+        # Add noise to layer2 to create sensor_field with shape (8, 32, 32, 4)
         sensor_field = layer2 + torch.randn_like(layer2) * self.noise_level
 
+        # Combine sensor_field and shadow2 to get error_field with shape (8, 32, 32, 4)
         error_field = sensor_field + shadow2
+        # Calculate mean of phase component (first channel) across all dimensions
         phase_trace = sensor_field[..., 0].mean().item()        # Mean phase θ
+        # Calculate norm of error_field tensor (scalar value)
         error_mag = torch.norm(error_field).item()              # Global error intensity
 
         # Symbolic collapse
+        # First average layer3 across patch dimensions (1, 2) to get shape (8, 4)
+        # Then take norm across D dimension (4) to get shape (8)
+        # Finally sum across K dimension (8) to get a scalar
         collapsed = torch.norm(layer3.mean(dim=(1, 2)), dim=-1).sum().item()
 
         # --- Check for trigger events ---
