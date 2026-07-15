@@ -847,13 +847,13 @@ class TestPredictiveHebbianCharacter(unittest.TestCase):
         )
         
         # Visualize the hierarchical representation
-        self.visualize_hierarchical_representation(final_state, char, save_path=f"hierarchical_{char}_representation.png")
+        self.visualize_hierarchical_representation(final_state, char, save_path=f"plots/hierarchical_{char}_representation.png")
         
         # Visualize feature extraction
-        self.visualize_feature_extraction(final_state, weights, char, save_path=f"hierarchical_{char}_features.png")
+        self.visualize_feature_extraction(final_state, weights, char, save_path=f"plots/hierarchical_{char}_features.png")
         
         # Visualize reconstruction from each layer
-        self.visualize_reconstruction(final_state, weights, char, save_path=f"hierarchical_{char}_reconstruction.png")
+        self.visualize_reconstruction(final_state, weights, char, save_path=f"plots/hierarchical_{char}_reconstruction.png")
         
         # Check that all layers have been updated
         for i in range(len(final_state.phases)):
@@ -880,7 +880,7 @@ class TestPredictiveHebbianCharacter(unittest.TestCase):
             character_states[c] = c_final
         
         # Visualize character embedding
-        self.visualize_character_embedding(character_states, characters, save_path="character_embedding.png")
+        self.visualize_character_embedding(character_states, characters, save_path="plots/character_embedding.png")
         
         # Test assertions
         # Check that different characters produce distinct representations
@@ -929,7 +929,7 @@ class TestPredictiveHebbianCharacter(unittest.TestCase):
             # Visualize comparison
             self.visualize_noise_comparison(
                 clean_state, noisy_state, predictive_final, hebbian_final, 
-                char, noise_level, save_path=f"noise_comparison_{char}_{int(noise_level*100)}.png"
+                char, noise_level, save_path=f"plots/noise_comparison_{char}_{int(noise_level*100)}.png"
             )
             
             # Calculate similarity to clean character for both models
@@ -994,7 +994,7 @@ class TestPredictiveHebbianCharacter(unittest.TestCase):
                 self.visualize_ambiguity_resolution(
                     ambiguous_matrix, predictive_final, hebbian_final, 
                     char1, char2, ambiguity_level, 
-                    save_path=f"ambiguity_{char1}_{char2}_{int(ambiguity_level*100)}.png"
+                    save_path=f"plots/ambiguity_{char1}_{char2}_{int(ambiguity_level*100)}.png"
                 )
                 
                 # Process individual characters for comparison
@@ -1063,7 +1063,7 @@ class TestPredictiveHebbianCharacter(unittest.TestCase):
             # Visualize comparison (reusing the noise comparison visualization)
             self.visualize_noise_comparison(
                 clean_state, occluded_state, predictive_final, hebbian_final, 
-                char, occlusion_level, save_path=f"occlusion_{char}_{occlusion_type}.png"
+                char, occlusion_level, save_path=f"plots/occlusion_{char}_{occlusion_type}.png"
             )
             
             # Calculate similarity to clean character for both models
