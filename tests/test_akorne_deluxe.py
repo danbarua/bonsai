@@ -141,8 +141,8 @@ class TestDeluxeHebbianKuramotoOperator(unittest.TestCase):
         dot_products = np.sum(state_vectors * projected, axis=1)
         self.assertTrue(np.allclose(dot_products, 0, atol=1e-6),
                         "Projected update is not orthogonal to non-unit state vectors.")
-        
-    #@mock.patch.object(DeluxeHebbianKuramotoOperator, 'discover_patterns')
+
+#    @mock.patch.object(DeluxeHebbianKuramotoOperator, 'discover_patterns')
     def test_apply_operator(self): #, mock_discover_patterns):
         # Test the full apply() method on a dummy layered state.
         new_state = self.operator.apply(self.state)
@@ -220,110 +220,110 @@ class TestDeluxeHebbianKuramotoOperator(unittest.TestCase):
         # Check that the phases shape is correct
         self.assertEqual(different_grid_state.phases[0].shape, (*grid_shape, self.operator.oscillator_dim),
                         "Phases shape is incorrect for different grid size.")
-        
-def test_numerical_stability(self):
-    # Test with very small frequency values
-    small_freq_state = self.state.copy()
-    small_freq_state.frequencies[0] = np.ones_like(small_freq_state.frequencies[0]) * 1e-10
-    
-    # This should run without numerical errors
-    try:
-        new_state = self.operator.apply(small_freq_state)
 
-        # Check that values are finite
-        self.assertTrue(np.all(np.isfinite(new_state.phases[0])),
-                       "Output contains non-finite values with small inputs")
-    except Exception as e:
-        self.fail(f"Operator failed with small frequency values: {e}")
+    def test_numerical_stability(self):
+        # Test with very small frequency values
+        small_freq_state = self.state.copy()
+        small_freq_state.frequencies[0] = np.ones_like(small_freq_state.frequencies[0]) * 1e-10
 
-def test_convergence(self):
-    # Run many steps and check if coherence increases or stabilizes
-    coherence_values = []
-    current_state = self.state.copy()
-    
-    for _ in range(10):  # Run for 10 steps
-        current_state = self.operator.apply(current_state)
-        coherence_values.append(self.operator.last_delta["mean_coherence"])
-    
-    # Check if coherence has improved or stabilized
-    self.assertGreaterEqual(coherence_values[-1], coherence_values[0] * 0.9,
-                          "Coherence did not improve or stabilize over time")
-    
-def test_compute_energy(self):
-    # Calculate energy for a simple state
-    energy = self.operator.compute_energy(self.state)
-    
-    # Energy should be a scalar
-    self.assertTrue(np.isscalar(energy), "Energy should be a scalar value")
-    
-    # Create a highly coherent state
-    coherent_state = self.state.copy()
-    coherent_phase = np.full_like(coherent_state.phases[0], 0.5)
-    coherent_state.phases[0] = coherent_phase
-    
-    # Create a random state
-    random_state = self.state.copy()
-    random_state.phases[0] = np.random.rand(*random_state.phases[0].shape)
-    
-    # Coherent state should have lower energy
-    coherent_energy = self.operator.compute_energy(coherent_state)
-    random_energy = self.operator.compute_energy(random_state)
-    
-    self.assertLess(coherent_energy, random_energy,
-                   "Coherent state does not have lower energy than random state")
-    
-def test_pattern_memory(self):
-    # Create a distinct pattern
-    pattern = np.zeros(self.operator.grid_size + (self.operator.oscillator_dim,))
-    pattern[4:8, 4:8, :] = 1.0  # Create a square pattern
-    
-    # Store pattern
-    pattern_idx = self.operator.store_new_pattern(pattern)
-    
-    # Retrieve pattern
-    retrieved_pattern = self.operator.pattern_memory[pattern_idx]['representation']
-    
-    # Pattern should be accurately stored
-    self.assertTrue(np.allclose(pattern, retrieved_pattern),
-                   "Pattern was not accurately stored in memory")
-    
-    # Label the pattern
-    self.operator.associate_label(pattern_idx, "square")
-    
-    # Find pattern by label
-    found_idx = self.operator.find_pattern_by_label("square")
-    
-    self.assertEqual(pattern_idx, found_idx,
-                    "Could not retrieve pattern by label")
-    
-#@unittest.parameterize([
-#     {"grid_size": (8, 8), "oscillator_dim": 4},
-#     {"grid_size": (16, 16), "oscillator_dim": 2},
-#     {"grid_size": (32, 32), "oscillator_dim": 8}
-# ])
-def test_different_configurations(self, grid_size=(16,16), oscillator_dim=64):
-    # Create an operator with the specified configuration
-    operator = DeluxeHebbianKuramotoOperator(
-        dt=0.1,
-        alpha=0.1,
-        mu=0.01,
-        oscillator_dim=oscillator_dim,
-        grid_size=grid_size,
-        weight_symmetry=True
-    )
-    operator.discover_patterns = lambda: None
-    
-    # Create a dummy state with matching dimensions
-    phases = [np.random.rand(*grid_size, oscillator_dim) * 2 * np.pi]
-    frequencies = [np.random.uniform(0.1, 1.0, size=grid_size)]
-    amplitudes = [np.ones(grid_size)]
-    state = DummyLayeredOscillatorState(phases, frequencies, amplitudes)
-    
-    # Apply the operator
-    new_state = operator.apply(state)
-    
-    # Check that the result has the expected shape
-    self.assertEqual(new_state.phases[0].shape, (*grid_size, oscillator_dim))
+        # This should run without numerical errors
+        try:
+            new_state = self.operator.apply(small_freq_state)
+
+            # Check that values are finite
+            self.assertTrue(np.all(np.isfinite(new_state.phases[0])),
+                           "Output contains non-finite values with small inputs")
+        except Exception as e:
+            self.fail(f"Operator failed with small frequency values: {e}")
+
+    def test_convergence(self):
+        # Run many steps and check if coherence increases or stabilizes
+        coherence_values = []
+        current_state = self.state.copy()
+
+        for _ in range(10):  # Run for 10 steps
+            current_state = self.operator.apply(current_state)
+            coherence_values.append(self.operator.last_delta["mean_coherence"])
+
+        # Check if coherence has improved or stabilized
+        self.assertGreaterEqual(coherence_values[-1], coherence_values[0] * 0.9,
+                              "Coherence did not improve or stabilize over time")
+
+    def test_compute_energy(self):
+        # Calculate energy for a simple state
+        energy = self.operator.compute_energy(self.state)
+
+        # Energy should be a scalar
+        self.assertTrue(np.isscalar(energy), "Energy should be a scalar value")
+
+        # Create a highly coherent state
+        coherent_state = self.state.copy()
+        coherent_phase = np.full_like(coherent_state.phases[0], 0.5)
+        coherent_state.phases[0] = coherent_phase
+
+        # Create a random state
+        random_state = self.state.copy()
+        random_state.phases[0] = np.random.rand(*random_state.phases[0].shape)
+
+        # Coherent state should have lower energy
+        coherent_energy = self.operator.compute_energy(coherent_state)
+        random_energy = self.operator.compute_energy(random_state)
+
+        self.assertLess(coherent_energy, random_energy,
+                       "Coherent state does not have lower energy than random state")
+
+    def test_pattern_memory(self):
+        # Create a distinct pattern
+        pattern = np.zeros(self.operator.grid_size + (self.operator.oscillator_dim,))
+        pattern[4:8, 4:8, :] = 1.0  # Create a square pattern
+
+        # Store pattern
+        pattern_idx = self.operator.store_new_pattern(pattern)
+
+        # Retrieve pattern
+        retrieved_pattern = self.operator.pattern_memory[pattern_idx]['representation']
+
+        # Pattern should be accurately stored
+        self.assertTrue(np.allclose(pattern, retrieved_pattern),
+                       "Pattern was not accurately stored in memory")
+
+        # Label the pattern
+        self.operator.associate_label(pattern_idx, "square")
+
+        # Find pattern by label
+        found_idx = self.operator.find_pattern_by_label("square")
+
+        self.assertEqual(pattern_idx, found_idx,
+                        "Could not retrieve pattern by label")
+
+    #@unittest.parameterize([
+    #     {"grid_size": (8, 8), "oscillator_dim": 4},
+    #     {"grid_size": (16, 16), "oscillator_dim": 2},
+    #     {"grid_size": (32, 32), "oscillator_dim": 8}
+    # ])
+    def test_different_configurations(self, grid_size=(16,16), oscillator_dim=64):
+        # Create an operator with the specified configuration
+        operator = DeluxeHebbianKuramotoOperator(
+            dt=0.1,
+            alpha=0.1,
+            mu=0.01,
+            oscillator_dim=oscillator_dim,
+            grid_size=grid_size,
+            weight_symmetry=True
+        )
+        operator.discover_patterns = lambda: None
+
+        # Create a dummy state with matching dimensions
+        phases = [np.random.rand(*grid_size, oscillator_dim) * 2 * np.pi]
+        frequencies = [np.random.uniform(0.1, 1.0, size=grid_size)]
+        amplitudes = [np.ones(grid_size)]
+        state = DummyLayeredOscillatorState(phases, frequencies, amplitudes)
+
+        # Apply the operator
+        new_state = operator.apply(state)
+
+        # Check that the result has the expected shape
+        self.assertEqual(new_state.phases[0].shape, (*grid_size, oscillator_dim))
 
 if __name__ == '__main__':
     unittest.main()
