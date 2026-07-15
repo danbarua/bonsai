@@ -331,6 +331,13 @@ class TestPredictiveHebbianLearning(unittest.TestCase):
     
     def test_perturbation_response(self):
         """Test response to external perturbations"""
+        # Seed the RNG: the operator randomly initializes its between-layer
+        # weights on first apply() if none are given, so without a fixed seed
+        # this test's outcome depends on whatever global random state was left
+        # over from whichever tests happened to run before it in the suite --
+        # it passed reliably in isolation but failed intermittently as part of
+        # the full suite for exactly this reason.
+        np.random.seed(42)
         # Create a state with zero phases and strong perturbations in specific locations
         phases = [
             np.zeros((2, 2)),

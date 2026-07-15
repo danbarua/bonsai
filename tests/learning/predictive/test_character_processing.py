@@ -18,7 +18,8 @@ from tests.learning.utils.viz_utils import (
     visualize_feature_extraction,
     visualize_reconstruction,
     visualize_ambiguity_resolution,
-    visualize_occlusion_handling
+    visualize_occlusion_handling,
+    visualize_character_embedding
 )
 
 class TestPredictiveHebbianCharacterProcessing(CharacterProcessingBaseTest):
@@ -160,6 +161,37 @@ class TestPredictiveHebbianCharacterProcessing(CharacterProcessingBaseTest):
         # Higher layers should generally have higher coherence
         # This might not always be true, but it's a reasonable expectation
         print(f"Layer coherence values: {coherence_values}")
+
+    def test_character_embedding(self):
+        """Test multi-character phase-space embedding visualization (PCA/t-SNE).
+
+        Ported from the standalone tests/test_predictive_hebbian_character.py
+        (now retired) along with its bug fixes -- see
+        tests/learning/utils/viz_utils.py::visualize_character_embedding.
+        """
+        characters = ['A', 'B', 'C', '1', '2']
+        character_states = {}
+
+        for c in characters:
+            c_matrix = self.get_character_matrix(c)
+            c_state = self.create_hierarchical_state(c_matrix, perturbation_strength=2.0)
+            c_final, _, _, _ = self.process_character(c_state, model_type="predictive", iterations=200)
+            character_states[c] = c_final
+
+        visualize_character_embedding(character_states, characters,
+                                       save_path="plots/comparison/character_embedding.png")
+
+        # Different characters should produce distinct representations --
+        # check every pair, not just one, matching the original test's coverage.
+        for i in range(len(characters)):
+            for j in range(i + 1, len(characters)):
+                char1, char2 = characters[i], characters[j]
+                phase_diff = np.abs(np.angle(np.exp(1j * (
+                    character_states[char1].phases[0] - character_states[char2].phases[0]
+                ))))
+                mean_diff = np.mean(phase_diff)
+                self.assertGreater(mean_diff, 0.1,
+                                    f"Characters '{char1}' and '{char2}' produce too similar states")
     
     def test_character_distinction(self):
         """Test that different characters produce distinct network states."""

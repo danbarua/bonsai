@@ -10,6 +10,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .character_utils import get_character_matrix, calculate_local_coherence
 
+# Try to import sklearn, but make it optional (matches the guard previously
+# only present in the standalone tests/test_predictive_hebbian_character.py,
+# ported here along with its bug fixes: SKLEARN_AVAILABLE needed a self.
+# prefix there since it was a class attribute; here it's a plain module-level
+# flag instead, and the TSNE perplexity is explicitly scaled to the sample
+# count since the default of 30 is unreachable for small character sets.)
+try:
+    from sklearn.decomposition import PCA
+    from sklearn.manifold import TSNE
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    print("Warning: sklearn not available. Character embedding visualization will use a simple projection.")
+
 # Ensure plots directory exists
 os.makedirs('plots/hebbian', exist_ok=True)
 os.makedirs('plots/predictive', exist_ok=True)
@@ -606,6 +620,77 @@ def visualize_occlusion_handling(clean_state, occluded_state, predictive_state, 
     # only happened in some functions' if-save_path-is-None branch, so any
     # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
     # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
+    plt.close()
+
+
+def visualize_character_embedding(character_states, characters, save_path=None):
+    """
+    Visualize how different characters are embedded in the phase space of each
+    layer, using dimensionality reduction (PCA or t-SNE) to create 2D plots.
+
+    Ported from tests/test_predictive_hebbian_character.py (the standalone
+    duplicate test file, retired in favor of this shared viz_utils module),
+    with two bugs already fixed there carried over:
+    - t-SNE's perplexity is explicitly capped at len(characters)-1, since the
+      default of 30 is unreachable for small character sets (previously
+      caused a NameError from an unrelated missing 'self.' typo that masked
+      this issue, then a separate sklearn ValueError once that was fixed).
+    - No 'self.SKLEARN_AVAILABLE' class-attribute indirection -- this module
+      uses a plain module-level SKLEARN_AVAILABLE flag instead.
+
+    Args:
+        character_states: dict mapping character -> its final LayeredOscillatorState
+        characters: list of characters that were processed
+        save_path: output path for the figure
+    """
+    first_char = characters[0]
+    n_layers = len(character_states[first_char].phases)
+
+    fig, axes = plt.subplots(1, n_layers, figsize=(n_layers * 5, 5))
+    if n_layers == 1:
+        axes = [axes]
+
+    for layer_idx in range(n_layers):
+        phase_data = []
+        for char in characters:
+            flat_phases = character_states[char].phases[layer_idx].flatten()
+            complex_phases = np.exp(1j * flat_phases)
+            features = np.concatenate([complex_phases.real, complex_phases.imag])
+            phase_data.append(features)
+        phase_data = np.array(phase_data)
+
+        if SKLEARN_AVAILABLE:
+            if len(characters) >= 5:
+                tsne = TSNE(n_components=2, random_state=42,
+                            perplexity=min(30, len(characters) - 1))
+                embedding = tsne.fit_transform(phase_data)
+                method = "t-SNE"
+            else:
+                pca = PCA(n_components=2)
+                embedding = pca.fit_transform(phase_data)
+                method = "PCA"
+
+            for i, char in enumerate(characters):
+                axes[layer_idx].scatter(embedding[i, 0], embedding[i, 1], s=100, label=char)
+            axes[layer_idx].set_title(f"Layer {layer_idx+1} Character Embedding ({method})")
+        else:
+            for i, char in enumerate(characters):
+                complex_phases = np.exp(1j * character_states[char].phases[layer_idx].flatten())
+                if len(complex_phases) >= 2:
+                    x, y = complex_phases[0].real, complex_phases[1].real
+                    axes[layer_idx].scatter(x, y, s=100, label=char)
+                else:
+                    axes[layer_idx].scatter(i, 0, s=100, label=char)
+            axes[layer_idx].set_title(f"Layer {layer_idx+1} Character Embedding (Simple Projection)")
+
+        axes[layer_idx].legend()
+        axes[layer_idx].grid(True)
+
+    plt.tight_layout()
+    if save_path is None:
+        save_path = "plots/comparison/character_embedding.png"
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()

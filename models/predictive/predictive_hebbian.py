@@ -163,7 +163,15 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
             phases_flat = state.phases[i].flatten()
             
             # 1. Hebbian-Kuramoto update (within-layer)
-            phase_diffs = phases_flat[:, np.newaxis] - phases_flat[np.newaxis, :]
+            # phase_diffs[i, j] = theta_j - theta_i ("other minus self"), matching
+            # Bronski et al. (2017) equation (2): sum_j gamma_ij sin(theta_j - theta_i).
+            # This is the standard *attractive* Kuramoto coupling for gamma_ij > 0.
+            # Previously computed as theta_i - theta_j ("self minus other"), which
+            # silently flips positive-weight coupling to *repulsive* -- the same
+            # bug found and fixed in HebbianKuramotoOperator (see
+            # models/hebbian/hebbian_kumaroto.py and
+            # tests/test_hebbian_kuramoto_bronski.py for the full analysis).
+            phase_diffs = phases_flat[np.newaxis, :] - phases_flat[:, np.newaxis]
             sin_diffs = np.sin(phase_diffs)
             
             # Compute Kuramoto coupling
