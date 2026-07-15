@@ -848,8 +848,7 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         # of the simulation as Hebbian learning strengthens in-phase coupling
         late_coherence = coherence_values[15:]
         self.assertGreaterEqual(late_coherence[-1], np.mean(late_coherence[:5]))
-    
-    @unittest.skip
+
     def test_synchronization_clusters(self):
         """Test that operator handles formation of synchronization clusters"""
 
