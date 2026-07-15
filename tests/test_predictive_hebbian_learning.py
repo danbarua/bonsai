@@ -483,7 +483,8 @@ class TestPredictiveHebbianLearning(unittest.TestCase):
         op = PredictiveHebbianOperator(
             dt=dt,  # Use local dt value
             pc_learning_rate=0.05,
-            hebb_learning_rate=0.05
+            hebb_learning_rate=0.05,
+            collect_diagnostics=True
         )
         
         # Apply multiple times to allow learning
