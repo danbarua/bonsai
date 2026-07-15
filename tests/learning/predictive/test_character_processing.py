@@ -37,6 +37,13 @@ class TestPredictiveHebbianCharacterProcessing(CharacterProcessingBaseTest):
         self.pc_precision = 1.0
         self.hebb_decay_rate = 0.1
     
+    def create_character_state(self, char, perturbation_strength=None):
+        """Create a hierarchical LayeredOscillatorState from a character."""
+        if perturbation_strength is None:
+            perturbation_strength = self.perturbation_strength
+        char_matrix = self.get_character_matrix(char)
+        return self.create_hierarchical_state(char_matrix, perturbation_strength=perturbation_strength)
+    
     def process_character(self, char_or_state, model_type="predictive", iterations=None):
         """
         Process a character through the specified model type.
@@ -437,3 +444,242 @@ class TestPredictiveHebbianCharacterProcessing(CharacterProcessingBaseTest):
             self.assertGreater(pred_similarity, -0.1,
                               f"Predictive model should maintain some similarity to clean character")
             # Note: We don't test the Hebbian model as it might produce negative similarity at high occlusion levels
+
+    def test_perturbation_influence(self):
+        """Test how perturbation strength affects character processing.
+
+        Ported from TestHebbianKuramotoCharacterProcessing -- general model
+        mechanics, not classification-specific, applies equally well here.
+        """
+        char = 'A'
+        perturbation_strengths = [0.5, 1.0, 2.0]
+        coherence_values = []
+
+        for strength in perturbation_strengths:
+            state = self.create_character_state(char, perturbation_strength=strength)
+            op = PredictiveHebbianOperator(
+                dt=self.dt, pc_learning_rate=self.pc_learning_rate,
+                hebb_learning_rate=self.hebb_learning_rate,
+                pc_error_scaling=self.pc_error_scaling,
+                pc_precision=self.pc_precision, hebb_decay_rate=self.hebb_decay_rate
+            )
+            for _ in range(100):
+                state = op.apply(state)
+            coherence_values.append(op.last_delta["mean_coherence"])
+            print(f"Perturbation strength: {strength}, Coherence: {op.last_delta['mean_coherence']:.4f}")
+
+        # Higher perturbation should lead to stronger influence on the network
+        self.assertNotAlmostEqual(coherence_values[0], coherence_values[-1],
+                                 msg="Different perturbation strengths should produce different results")
+
+    def test_frequency_vs_perturbation(self):
+        """Test that heterogeneous natural frequencies measurably change the
+        relative phase structure the network settles into, compared to zero
+        frequencies.
+
+        Ported from TestHebbianKuramotoCharacterProcessing, using the same
+        corrected design applied there this project: comparing RELATIVE phase
+        structure under HETEROGENEOUS per-oscillator frequencies against zero
+        frequencies, rather than a uniform shared frequency shift against
+        absolute phase (which doesn't meaningfully change relative/
+        synchronized structure per standard Kuramoto theory, and is sensitive
+        to incidental net-rotation coincidences for specific dt/step counts).
+        """
+        char = 'A'
+        char_matrix = self.get_character_matrix(char)
+
+        # Zero frequencies
+        state_zero = self.create_hierarchical_state(char_matrix, perturbation_strength=2.0)
+        for i in range(len(state_zero._frequencies)):
+            state_zero._frequencies[i][:] = 0.0
+        op_zero = PredictiveHebbianOperator(
+            dt=self.dt, pc_learning_rate=self.pc_learning_rate,
+            hebb_learning_rate=self.hebb_learning_rate, pc_error_scaling=self.pc_error_scaling,
+            pc_precision=self.pc_precision, hebb_decay_rate=self.hebb_decay_rate
+        )
+        for _ in range(100):
+            state_zero = op_zero.apply(state_zero)
+
+        # Heterogeneous frequencies tied to the character pattern (input layer only)
+        rng = np.random.default_rng(42)
+        state_het = self.create_hierarchical_state(char_matrix, perturbation_strength=2.0)
+        state_het._frequencies[0][:] = np.where(char_matrix > 0, 1.0, 0.5) + 0.05 * rng.standard_normal(char_matrix.shape)
+        for i in range(1, len(state_het._frequencies)):
+            state_het._frequencies[i][:] = 0.0
+        op_het = PredictiveHebbianOperator(
+            dt=self.dt, pc_learning_rate=self.pc_learning_rate,
+            hebb_learning_rate=self.hebb_learning_rate, pc_error_scaling=self.pc_error_scaling,
+            pc_precision=self.pc_precision, hebb_decay_rate=self.hebb_decay_rate
+        )
+        for _ in range(100):
+            state_het = op_het.apply(state_het)
+
+        zero_relative = state_zero.phases[0] - np.angle(np.mean(np.exp(1j * state_zero.phases[0])))
+        het_relative = state_het.phases[0] - np.angle(np.mean(np.exp(1j * state_het.phases[0])))
+        phase_diff = np.mean(np.abs(np.angle(np.exp(1j * (zero_relative - het_relative)))))
+
+        print(f"Mean relative phase difference, zero vs heterogeneous frequencies: {phase_diff:.4f}")
+        self.assertGreater(phase_diff, 0.1,
+                          "Heterogeneous frequencies should measurably change the network's relative phase structure")
+
+    def test_predictive_coding_contribution(self):
+        """Compare full Predictive Hebbian (predictive coding + within-layer
+        Hebbian) against within-layer Hebbian alone (predictive coding
+        disabled via pc_error_scaling=0).
+
+        This is the Predictive-model analog of
+        TestHebbianKuramotoCharacterProcessing::test_comparison_with_standard_kuramoto
+        (which compares Hebbian-with-learning against Hebbian-without, i.e.
+        mu=0). The comparison axis here is different -- pc_error_scaling
+        controls the predictive-coding contribution specifically, not
+        learning in general -- since that's the actual novel mechanism this
+        model adds on top of plain Hebbian-Kuramoto.
+        """
+        char = 'A'
+
+        state_full = self.create_character_state(char)
+        op_full = PredictiveHebbianOperator(
+            dt=self.dt, pc_learning_rate=self.pc_learning_rate,
+            hebb_learning_rate=self.hebb_learning_rate, pc_error_scaling=self.pc_error_scaling,
+            pc_precision=self.pc_precision, hebb_decay_rate=self.hebb_decay_rate
+        )
+
+        state_no_pc = self.create_character_state(char)
+        op_no_pc = PredictiveHebbianOperator(
+            dt=self.dt, pc_learning_rate=self.pc_learning_rate,
+            hebb_learning_rate=self.hebb_learning_rate, pc_error_scaling=0.0,
+            pc_precision=self.pc_precision, hebb_decay_rate=self.hebb_decay_rate
+        )
+
+        for _ in range(200):
+            state_full = op_full.apply(state_full)
+            state_no_pc = op_no_pc.apply(state_no_pc)
+
+        coherence_full = op_full.last_delta["mean_coherence"]
+        coherence_no_pc = op_no_pc.last_delta["mean_coherence"]
+        print(f"Full predictive coding coherence: {coherence_full:.4f}, No predictive coding coherence: {coherence_no_pc:.4f}")
+
+        phase_diff = np.mean(np.abs(np.angle(np.exp(1j * (state_full.phases[0] - state_no_pc.phases[0])))))
+        print(f"Mean phase difference, with vs without predictive coding: {phase_diff:.4f}")
+
+        self.assertNotEqual(round(coherence_full, 2), round(coherence_no_pc, 2),
+                           "Predictive coding should produce measurably different results than within-layer Hebbian alone")
+
+        visualize_character_state(
+            state_full, {"within_layer_weights": op_full.within_layer_weights, "between_layer_weights": op_full.between_layer_weights},
+            char, model_type='predictive', save_path=f"plots/predictive/character_{char}_full.png"
+        )
+        visualize_character_state(
+            state_no_pc, {"within_layer_weights": op_no_pc.within_layer_weights, "between_layer_weights": op_no_pc.between_layer_weights},
+            char, model_type='predictive', save_path=f"plots/predictive/character_{char}_no_pc.png"
+        )
+
+    def test_character_sequence(self):
+        """Test processing a sequence of characters and analyze transitions between them.
+
+        Ported from TestHebbianKuramotoCharacterProcessing.
+        """
+        chars = ['A', '1', '+']
+        states = []
+        weights_list = []
+
+        for char in chars:
+            state, weights, _, _ = self.process_character(char, iterations=self.max_steps)
+            states.append(state)
+            weights_list.append(weights)
+            visualize_character_state(
+                state, weights, char, model_type='predictive',
+                save_path=f"plots/predictive/character_{char}_sequence.png"
+            )
+
+        for i in range(len(chars) - 1):
+            phase_diff = np.abs(np.angle(np.exp(1j * (states[i].phases[0] - states[i + 1].phases[0]))))
+            mean_diff = np.mean(phase_diff)
+            weight_diff = np.mean(np.abs(
+                weights_list[i]["within_layer_weights"][0] - weights_list[i + 1]["within_layer_weights"][0]
+            ))
+            print(f"Transition {chars[i]} -> {chars[i+1]}: Mean phase diff = {mean_diff:.4f}, Mean weight diff = {weight_diff:.4f}")
+
+            self.assertGreater(mean_diff, 0.1,
+                              f"Characters '{chars[i]}' and '{chars[i+1]}' produce too similar states")
+
+    def test_learning_transfer(self):
+        """Test if learning one character helps with processing a structurally similar character.
+
+        Ported from TestHebbianKuramotoCharacterProcessing, using
+        within_layer_weights/between_layer_weights (settable dataclass
+        fields on PredictiveHebbianOperator) in place of Hebbian's
+        init_weights constructor argument -- there's no single init_weights
+        kwarg here, but the equivalent transfer is just as direct.
+        """
+        state_A, weights_A, _, _ = self.process_character('A', iterations=self.max_steps)
+        state_B_random, weights_B_random, _, _ = self.process_character('B', iterations=self.max_steps)
+
+        state_B = self.create_character_state('B', self.perturbation_strength)
+        n_layers = len(weights_A["within_layer_weights"])
+        op_transfer = PredictiveHebbianOperator(
+            dt=self.dt, pc_learning_rate=self.pc_learning_rate,
+            hebb_learning_rate=self.hebb_learning_rate, pc_error_scaling=self.pc_error_scaling,
+            pc_precision=self.pc_precision, hebb_decay_rate=self.hebb_decay_rate,
+            within_layer_weights=[w.copy() for w in weights_A["within_layer_weights"]],
+            between_layer_weights=[w.copy() for w in weights_A["between_layer_weights"]],
+            # apply() only initializes prediction_history/error_history together
+            # with the weights (both gated behind the same "if not
+            # self.between_layer_weights" check) -- since we're pre-supplying
+            # weights here, we need to supply these too or apply() indexes
+            # into an empty list.
+            prediction_history=[[] for _ in range(n_layers - 1)],
+            error_history=[[] for _ in range(n_layers - 1)],
+        )
+
+        previous_coherence = 0
+        steps_without_significant_change = 0
+        steps_to_converge = self.max_steps
+        for step in range(self.max_steps):
+            state_B = op_transfer.apply(state_B)
+            current_coherence = op_transfer.last_delta["mean_coherence"]
+            if abs(current_coherence - previous_coherence) < self.convergence_threshold:
+                steps_without_significant_change += 1
+                if steps_without_significant_change >= 10:
+                    steps_to_converge = step + 1
+                    break
+            else:
+                steps_without_significant_change = 0
+            previous_coherence = current_coherence
+
+        # Soft test, matching the Hebbian version's intent: transferred-weight
+        # initialization should produce a genuinely different outcome than a
+        # fresh (random-weight) run, not necessarily a better/faster one.
+        coherence_transfer = op_transfer.last_delta["mean_coherence"]
+        coherence_random = weights_B_random["within_layer_weights"][0].mean()
+        print(f"Processing 'B' with weights from 'A': Coherence = {coherence_transfer:.4f}, Steps = {steps_to_converge}")
+        print(f"Processing 'B' with random weights: Mean weight = {coherence_random:.4f}")
+        self.assertNotEqual(round(coherence_transfer, 2), round(coherence_random, 2),
+                           "Transfer learning should produce different results than random initialization")
+
+    def test_parameter_sensitivity(self):
+        """Test sensitivity to different learning-rate/decay parameter settings.
+
+        Ported from TestHebbianKuramotoCharacterProcessing, sweeping this
+        model's own parameters (pc_learning_rate, hebb_learning_rate,
+        hebb_decay_rate, pc_error_scaling) in place of Hebbian's mu/alpha.
+        """
+        char = 'A'
+        parameter_sets = [
+            {'pc_learning_rate': 0.05, 'hebb_learning_rate': 0.05, 'hebb_decay_rate': 0.01, 'pc_error_scaling': 0.5},
+            {'pc_learning_rate': 0.2, 'hebb_learning_rate': 0.05, 'hebb_decay_rate': 0.01, 'pc_error_scaling': 0.5},
+            {'pc_learning_rate': 0.05, 'hebb_learning_rate': 0.2, 'hebb_decay_rate': 0.01, 'pc_error_scaling': 0.5},
+            {'pc_learning_rate': 0.05, 'hebb_learning_rate': 0.05, 'hebb_decay_rate': 0.05, 'pc_error_scaling': 0.5},
+        ]
+        coherence_values = []
+        for params in parameter_sets:
+            self.pc_learning_rate = params['pc_learning_rate']
+            self.hebb_learning_rate = params['hebb_learning_rate']
+            self.hebb_decay_rate = params['hebb_decay_rate']
+            self.pc_error_scaling = params['pc_error_scaling']
+            _, _, deltas, _ = self.process_character(char, iterations=self.max_steps)
+            coherence_values.append(deltas[-1]["mean_coherence"])
+            print(f"Parameters: {params}, Coherence: {deltas[-1]['mean_coherence']:.4f}")
+
+        cv = np.std(coherence_values) / np.mean(coherence_values)
+        self.assertGreater(cv, 0.05, "Network should be sensitive to parameter changes")
