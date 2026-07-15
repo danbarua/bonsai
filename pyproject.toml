@@ -1,0 +1,37 @@
+[project]
+name = "bonsai"
+version = "0.1.0"
+description = "Predictive Hebbian Oscillatory Networks"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy==2.4.4", # newer numpy regresses on NDArray[np.float64] dtype resolution
+    "scipy",
+    "pandas",
+    "xarray",
+    "hdbscan",
+    "networkx",
+    "opencv-python",
+    "matplotlib",
+    "seaborn",
+    "holoviews",
+    "beartype==0.22.9",  # newer beartype regresses on NDArray[np.float64] dtype resolution
+]
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "pytest",
+    "coverage",
+]
+notebook = [
+    "ipywidgets",
+    "ipykernel",
+    "jupyterlab",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
