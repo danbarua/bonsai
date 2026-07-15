@@ -158,7 +158,7 @@ def analyze_character_state(state, weights, delta, char):
     plt.colorbar(weight_img, ax=axes[1, 1])
     
     plt.tight_layout()
-    plt.savefig(f"character_{char}_analysis.png")
+    plt.savefig(f"plots/character_{char}_analysis.png")
     plt.close()
     
     return coherence_map

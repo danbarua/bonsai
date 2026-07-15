@@ -6,7 +6,7 @@ from dynamics import LayeredOscillatorState
 
 def analyze_gft_dynamics(self, state: LayeredOscillatorState) -> dict[str, Any]:
     """
-    Analyze network dynamics using Graph Fouriter Transform principles
+    Analyze network dynamics using Graph Fourier Transform principles
     ---------------------------------------------
     This method directly integrates with GFT approach by:
 

@@ -24,6 +24,16 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
     # Common parameters
     dt: float = 0.01  # Reduced for better numerical stability
     weight_normalization: bool = True  # Whether to normalize weights
+
+    # Diagnostics control. The full spectral/fixed-point/energy analysis is
+    # expensive (SVD + eigendecomposition per layer per step) and was, prior
+    # to this fix, being computed on *every* iteration but silently dropped
+    # by the metrics collector's CSV export (it only keeps scalar fields).
+    # Off by default; enable or reduce diagnostics_every for debugging.
+    collect_diagnostics: bool = False
+    diagnostics_every: int = 1  # only used if collect_diagnostics is True
+    _step: int = field(default=0, init=False, repr=False)
+    _last_target_weights: list[NDArray[np.float64]] = field(default_factory=list, init=False, repr=False)
     
     # State variables
     between_layer_weights: list[NDArray[np.float64]] = field(default_factory=list)
@@ -69,8 +79,14 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
         if self.weight_normalization:
             self._normalize_weights()
         
-        # 6. Collect metrics and analyze dynamics
-        self._collect_metrics(state, new_state, predictions, errors)
+        # 6. Collect metrics. Cheap coherence/error metrics always run (the
+        # convergence check depends on mean_coherence); the expensive
+        # spectral/fixed-point/energy diagnostics only run if explicitly
+        # requested, since they were previously computed unconditionally
+        # and then discarded before ever reaching the CSV output.
+        self._step += 1
+        run_diagnostics = self.collect_diagnostics and (self._step % self.diagnostics_every == 0)
+        self._collect_metrics(state, new_state, predictions, errors, run_diagnostics)
         
         return new_state
     
@@ -158,6 +174,19 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
             
             # 2. Predictive coding update (between-layer)
             pc_update = np.zeros_like(hebbian_update)
+
+            # 2a. Sensory (bottom-up) error at the input layer, driven by the
+            # character itself. Previously state.perturbations was never
+            # read anywhere in this operator, so the model's dynamics were
+            # entirely blind to which character had been presented. This
+            # treats the stimulated pixels as sensory evidence the layer
+            # should phase-lock to a reference phase (0); unstimulated
+            # pixels carry no external error and are driven purely by the
+            # internal Hebbian/predictive-coding dynamics as before.
+            if i == 0:
+                stimulus_mask = (state.perturbations[i].flatten() != 0).astype(np.float64)
+                sensory_error = np.angle(np.exp(1j * (0.0 - phases_flat))) * stimulus_mask
+                pc_update += self.pc_error_scaling * self.pc_precision * sensory_error
             
             # Bottom-up error from layer below
             if i > 0:
@@ -213,6 +242,7 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
     
     def _update_hebbian_weights(self, state: LayeredOscillatorState) -> None:
         """Update within-layer weights according to Hebbian rule"""
+        self._last_target_weights = []
         for i in range(state.num_layers):
             phases_flat = state.phases[i].flatten()
             
@@ -222,6 +252,7 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
             
             # Compute weight update (approach the fixed point solution)
             target_weights = cos_diffs / self.hebb_decay_rate
+            self._last_target_weights.append(target_weights)  # cached for _analyze_fixed_points
             weight_error = target_weights - self.within_layer_weights[i]
             
             # Apply updates with learning rate
@@ -261,8 +292,16 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
                 self.between_layer_weights[i] = self.between_layer_weights[i] / max_sv
     
     def _collect_metrics(self, state: LayeredOscillatorState, new_state: LayeredOscillatorState,
-                         predictions: list[NDArray[np.float64]], errors: list[NDArray[np.float64]]) -> None:
-        """Collect comprehensive metrics for monitoring and analysis"""
+                         predictions: list[NDArray[np.float64]], errors: list[NDArray[np.float64]],
+                         run_diagnostics: bool = False) -> None:
+        """Collect comprehensive metrics for monitoring and analysis.
+
+        Coherence and error metrics are cheap (O(n)) and always computed,
+        since the convergence check depends on mean_coherence. The spectral
+        decomposition / fixed-point / energy diagnostics are O(n^3) per
+        layer (SVD + eigendecomposition) and are only computed when
+        run_diagnostics is True.
+        """
         layer_count = state.num_layers
         
         # Phase coherence metrics
@@ -275,25 +314,18 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
         # Error metrics
         error_norms = [float(np.linalg.norm(err)) for err in errors]
         
-        # Spectral analysis of weight matrices
-        spectral_stats = self._analyze_weight_spectrum()
-        
-        # Fixed point analysis for Hebbian weights
-        fixed_point_analysis = self._analyze_fixed_points(state)
-        
-        # Energy metrics
-        energy = self._compute_system_energy(state)
-        
         self.last_delta = {
             "type": "enhanced_predictive_hebbian",
             "coherence": coherence_values,
             "mean_coherence": float(np.mean(coherence_values)) if len(coherence_values) > 0 else 0,
             "prediction_errors": error_norms,
             "total_error": float(np.sum(error_norms)),
-            "weight_spectrum": spectral_stats,
-            "fixed_point_analysis": fixed_point_analysis,
-            "system_energy": energy
         }
+
+        if run_diagnostics:
+            self.last_delta["weight_spectrum"] = self._analyze_weight_spectrum()
+            self.last_delta["fixed_point_analysis"] = self._analyze_fixed_points(state)
+            self.last_delta["system_energy"] = self._compute_system_energy(state, predictions)
     
     def _analyze_weight_spectrum(self) -> dict[str, Any]:
         """Analyze spectral properties of weight matrices"""
@@ -302,11 +334,14 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
             "predictive": []
         }
         
-        # Analyze Hebbian weights
+        # Analyze Hebbian weights. These matrices are symmetric by
+        # construction (the Hebbian target cos(phase_diff) is symmetric,
+        # and normalization preserves that), so eigvalsh (symmetric-
+        # optimized, real eigenvalues guaranteed) is both faster and more
+        # numerically appropriate than the general-purpose eigvals solver.
         for i, w in enumerate(self.within_layer_weights):
             try:
-                # Get top eigenvalues
-                eigvals = np.linalg.eigvals(w)
+                eigvals = np.linalg.eigvalsh(w)
                 max_eigval = float(np.max(np.abs(eigvals)))
                 min_eigval = float(np.min(np.abs(eigvals)))
                 
@@ -344,17 +379,16 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
         return spectrum_data
     
     def _analyze_fixed_points(self, state: LayeredOscillatorState) -> dict[str, Any]:
-        """Analyze how close the system is to theoretical fixed points"""
+        """Analyze how close the system is to theoretical fixed points.
+
+        Reuses target_weights cached by _update_hebbian_weights this step
+        instead of recomputing phase_diffs / cos(phase_diffs) from scratch
+        (theoretical_weights here is identical to that method's target_weights).
+        """
         fixed_point_data = []
         
         for i in range(state.num_layers):
-            phases_flat = state.phases[i].flatten()
-            
-            # Compute current phase differences
-            phase_diffs = phases_flat[:, np.newaxis] - phases_flat[np.newaxis, :]
-            
-            # Theoretical fixed point weights
-            theoretical_weights = np.cos(phase_diffs) / self.hebb_decay_rate
+            theoretical_weights = self._last_target_weights[i]
             
             # Compute distance to fixed point
             weight_diff = theoretical_weights - self.within_layer_weights[i]
@@ -369,8 +403,14 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
         
         return fixed_point_data
     
-    def _compute_system_energy(self, state: LayeredOscillatorState) -> dict[str, float]:
-        """Compute energy-based metrics for the system"""
+    def _compute_system_energy(self, state: LayeredOscillatorState,
+                                predictions: list[NDArray[np.float64]]) -> dict[str, float]:
+        """Compute energy-based metrics for the system.
+
+        Reuses the normalized phase predictions already computed this step
+        by _compute_hierarchical_predictions instead of recomputing the
+        between_layer_weights @ lower_activity projection from scratch.
+        """
         # Define system energy components
         hebbian_energy = 0.0
         pc_energy = 0.0
@@ -384,14 +424,13 @@ class PredictiveHebbianOperator(StateMutation[LayeredOscillatorState]):
             layer_energy = -np.sum(self.within_layer_weights[i] * np.cos(phase_diffs))
             hebbian_energy += float(layer_energy)
         
-        # Compute predictive coding energy (prediction error)
+        # Compute predictive coding energy (prediction error).
+        # predictions[i] is already the angle of the unit-normalized
+        # projection from layer i to layer i+1, so exp(1j*predictions[i])
+        # reconstructs normalized_prediction without redoing the matmul.
         for i in range(state.num_layers - 1):
-            lower_activity = np.exp(1j * state.phases[i]).flatten()
             higher_activity = np.exp(1j * state.phases[i+1]).flatten()
-            
-            prediction = self.between_layer_weights[i] @ lower_activity
-            prediction_norm = np.abs(prediction)
-            normalized_prediction = prediction / (prediction_norm + 1e-10)
+            normalized_prediction = np.exp(1j * predictions[i])
             
             # Prediction error energy
             error = np.abs(higher_activity - normalized_prediction)

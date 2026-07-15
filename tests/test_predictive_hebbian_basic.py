@@ -119,7 +119,7 @@ class TestPredictiveHebbianBasic(unittest.TestCase):
     
     def test_single_update(self):
         """Test a single update step"""
-        op = PredictiveHebbianOperator(dt=0.1)
+        op = PredictiveHebbianOperator(dt=0.1, collect_diagnostics=True)
         new_state = op.apply(self.multi_layer_state)
         
         # Check that phases were updated
@@ -230,7 +230,7 @@ class TestPredictiveHebbianBasic(unittest.TestCase):
     
     def test_system_energy_computation(self):
         """Test computation of system energy metrics"""
-        op = PredictiveHebbianOperator(dt=0.1)
+        op = PredictiveHebbianOperator(dt=0.1, collect_diagnostics=True)
         new_state = op.apply(self.multi_layer_state)
         
         # Check energy metrics

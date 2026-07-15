@@ -441,7 +441,7 @@ class TestPredictiveHebbianEdgeCases(unittest.TestCase):
     
     def test_spectral_analysis(self):
         """Test spectral analysis of weight matrices"""
-        op = PredictiveHebbianOperator(dt=0.1)
+        op = PredictiveHebbianOperator(dt=0.1, collect_diagnostics=True)
         new_state = op.apply(self.large_state)
         
         # Get spectral analysis

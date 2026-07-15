@@ -461,6 +461,7 @@ def run_single_character_test(char: str = 'A', noise_level: float = 0.0, occlusi
     print(f"Memory Ratio: {memory_ratio:.2f}x")
 
 if __name__ == "__main__":
+    np.random.seed(42)  # reproducible runs; previously unseeded
     # Run a single character test for quick demonstration
     run_single_character_test(char='A')
     
