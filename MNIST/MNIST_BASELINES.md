@@ -173,11 +173,37 @@ data-starved 5k-regime than the well-powered 60k one.
 - `stage0_75_raw_pixel_trained_baseline.py` -- raw pixels + trained
   LogisticRegression (0.9261).
 
+- `few_shot_harness.py` -- encoding- and classifier-agnostic few-shot
+  evaluation harness (5/10/50 examples/class, multiple stratified draws per
+  size, mean +/- std reported). Verified: `sklearn.neighbors.NearestCentroid`
+  confirmed to produce identical predictions (100% agreement, including
+  under genuinely ambiguous/overlapping synthetic data) to the hand-rolled
+  centroid logic used in Stages 0/0.25, so swapping to it for the harness
+  changes nothing about what's being measured. Sanity-tested against a
+  deliberately hard synthetic dataset: shows accuracy climbing and variance
+  shrinking with sample size, as expected, not just running without error.
+
+  Usage:
+  ```python
+  from few_shot_harness import evaluate_few_shot, print_few_shot_results
+  from sklearn.neighbors import NearestCentroid
+
+  def my_encoding(X):  # X: (N, 784) raw pixels in [0,1] -> (N, D) features
+      ...
+
+  results = evaluate_few_shot(
+      my_encoding, NearestCentroid, X_train_flat, y_train, X_test_flat, y_test,
+      sample_sizes=[5, 10, 50], n_trials=10
+  )
+  print_few_shot_results(results, "my encoding + NearestCentroid")
+  ```
+  `classifier_factory` can be any zero-arg callable returning a fresh
+  fit/predict-compatible object -- swap in `LogisticRegression` (or a future
+  oscillator-model wrapper) exactly the same way.
+
 ## Open items
 
-- Build a few-shot (5/10/50 examples/class) evaluation harness, encoding-
-  and classifier-agnostic, since that's the regime that actually matters for
-  Bonsai's methodology -- in progress.
 - Scaffold the actual new oscillator-field model (local coupling, NumPy,
-  closed-loop anchoring, partial-arc phase mapping) once the harness exists
-  to evaluate it properly.
+  closed-loop anchoring, partial-arc phase mapping), then run it through
+  `few_shot_harness.py` at 5/10/50 examples/class against the raw-pixel and
+  cos/sin baselines already established here.
