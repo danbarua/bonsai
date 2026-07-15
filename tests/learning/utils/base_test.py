@@ -18,7 +18,22 @@ from .character_utils import (
 )
 
 class CharacterProcessingBaseTest(unittest.TestCase):
-    """Base class for character processing tests with common functionality."""
+    """
+    Base class for character processing tests with common functionality.
+
+    NOT meant to be run directly -- its test_* methods are abstract stubs
+    that raise NotImplementedError, meant to be overridden by concrete
+    subclasses. `__test__ = False` tells pytest not to collect this class
+    itself (only unittest.TestCase subclasses that don't override this back
+    to True get collected); without it, pytest ran this base class's own
+    stub methods as if they were real tests, and they always failed --
+    12 permanent, meaningless failures across the files that import this,
+    regardless of whether the actual models under test were correct.
+
+    Concrete subclasses must set `__test__ = True` to be collected again,
+    since this attribute is inherited via the class's MRO otherwise.
+    """
+    __test__ = False
     
     def setUp(self):
         """Set up common test parameters"""

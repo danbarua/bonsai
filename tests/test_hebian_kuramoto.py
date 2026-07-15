@@ -741,7 +741,14 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         
         # The perturbed oscillator should have a different phase
         phase_diff = np.abs(np.angle(np.exp(1j * (phases_after[perturbed_idx] - avg_phase))))
-        self.assertGreater(phase_diff, 0.1)  # Should have moved away from group
+        # With perturbation=10.0 and dt=0.01, the single-step phase shift from
+        # the perturbation term alone is dt*10.0 = 0.1 *exactly* (coupling
+        # contributes ~0 this step, since all phases start identical so
+        # sin(0)=0). The threshold was previously set to exactly that value
+        # (0.1), which is a deterministic boundary-equality failure, not a
+        # meaningful check -- assertGreater(0.1, 0.1) is always false. Using
+        # a threshold with real margin below the expected value instead.
+        self.assertGreater(phase_diff, 0.05)  # Should have moved away from group
         
         # The coherence should have decreased
         delta_after = op.get_delta()
@@ -820,16 +827,19 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
             _layer_shapes=layer_shapes
         )
         
-        # Initialize weights at theoretical fixed point
+        # Initialize weights at theoretical fixed point: w* = mu*cos(dtheta)/alpha
+        # (the fixed point of dw/dt = mu*cos(dtheta) - alpha*w; the mu factor
+        # was previously missing here, initializing weights 10x too large for
+        # these alpha/mu values, which combined with a since-fixed coupling
+        # sign bug caused chaotic instability rather than the stability this
+        # test is meant to check).
         phases_flat = phases[0].flatten()
         phase_diffs = phases_flat[:, np.newaxis] - phases_flat[np.newaxis, :]
         alpha = 0.1
-        fp_weights = [np.cos(phase_diffs) / alpha]
+        mu = 0.1
+        fp_weights = [mu * np.cos(phase_diffs) / alpha]
         
-        # Add extra coupling strength to compensate for frequency differences
-        fp_weights[0] = fp_weights[0] * 5.0
-        
-        op = HebbianKuramotoOperator(init_weights=fp_weights, dt=0.1, mu=0.1, alpha=alpha)
+        op = HebbianKuramotoOperator(init_weights=fp_weights, dt=0.1, mu=mu, alpha=alpha)
         
         # Run for several steps
         current_state = small_freq_state
@@ -845,9 +855,12 @@ class TestHebbianKuramotoEdgeCases(unittest.TestCase):
         self.assertGreater(coherence_values[-1], 0.85)
         
         # Coherence should be stable or improving in the latter half
-        # of the simulation as Hebbian learning strengthens in-phase coupling
+        # of the simulation as Hebbian learning strengthens in-phase coupling.
+        # Small tolerance since coherence at steady state is now ~0.9999993
+        # (essentially exactly 1.0) -- a strict >= comparison trips on
+        # floating-point noise at the ~1e-7 level, not a real decline.
         late_coherence = coherence_values[15:]
-        self.assertGreaterEqual(late_coherence[-1], np.mean(late_coherence[:5]))
+        self.assertGreaterEqual(late_coherence[-1], np.mean(late_coherence[:5]) - 1e-6)
 
     def test_synchronization_clusters(self):
         """Test that operator handles formation of synchronization clusters"""

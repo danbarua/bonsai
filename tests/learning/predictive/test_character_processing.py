@@ -23,6 +23,7 @@ from tests.learning.utils.viz_utils import (
 
 class TestPredictiveHebbianCharacterProcessing(CharacterProcessingBaseTest):
     """Tests for processing character inputs with a Predictive Hebbian network."""
+    __test__ = True  # override CharacterProcessingBaseTest.__test__ = False; this concrete class should be collected
     
     def setUp(self):
         """Set up test fixtures"""

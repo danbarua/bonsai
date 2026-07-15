@@ -92,6 +92,12 @@ def visualize_character_state(state, weights, char, model_type='hebbian', save_p
         # Default path based on model type
         save_path = f"plots/{model_type}/character_{char}_analysis.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
     
@@ -146,6 +152,12 @@ def visualize_noisy_character(clean_state, noisy_state, char, noise_level, model
         # Default path based on model type
         save_path = f"plots/{model_type}/character_{char}_noisy_{int(noise_level*100)}.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
 
@@ -208,6 +220,12 @@ def visualize_model_comparison(char, hebbian_state, predictive_state, save_path=
         # Ensure directory exists
         os.makedirs('plots/comparison', exist_ok=True)
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
 
@@ -273,6 +291,12 @@ def visualize_hierarchical_representation(state, char, save_path=None):
     if save_path is None:
         save_path = f"plots/predictive/hierarchical_{char}_representation.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
 
@@ -359,6 +383,12 @@ def visualize_feature_extraction(state, weights, char, save_path=None):
     if save_path is None:
         save_path = f"plots/predictive/hierarchical_{char}_features.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
 
@@ -424,6 +454,12 @@ def visualize_reconstruction(state, weights, char, save_path=None):
     if save_path is None:
         save_path = f"plots/predictive/hierarchical_{char}_reconstruction.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
 
@@ -488,6 +524,12 @@ def visualize_ambiguity_resolution(ambiguous_matrix, predictive_state, hebbian_s
         os.makedirs('plots/comparison', exist_ok=True)
         save_path = f"plots/comparison/ambiguity_{char1}_{char2}_{int(ambiguity_level*100)}.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
 
@@ -559,5 +601,11 @@ def visualize_occlusion_handling(clean_state, occluded_state, predictive_state, 
         os.makedirs('plots/comparison', exist_ok=True)
         save_path = f"plots/comparison/occlusion_{char}_{occlusion_type}_{int(occlusion_level*100)}.png"
     
+    # Ensure the output directory exists regardless of whether save_path was
+    # the function's own default or supplied by the caller -- previously this
+    # only happened in some functions' if-save_path-is-None branch, so any
+    # caller-supplied path into a not-yet-existing directory (e.g. plots/comparison/)
+    # failed with FileNotFoundError.
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
     plt.close()
